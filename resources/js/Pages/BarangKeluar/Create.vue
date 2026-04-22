@@ -17,7 +17,7 @@ import {
     PhReceipt,
     PhShieldCheck
 } from "@phosphor-icons/vue";
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 
 const props = defineProps({
     customers: Array,
@@ -28,8 +28,11 @@ const props = defineProps({
 const form = useForm({
     customer_id: '',
     warehouse_id: '',
+    po_number: '',
     tanggal: new Date().toISOString().split('T')[0],
     payment_term: 'cash',
+    jenis_pembayaran: 'cash',
+    tempo_hari: 30,
     keterangan: '',
     items: [],
     due_date: ''
@@ -54,11 +57,23 @@ const onProductChange = (index) => {
     const product = props.products.find(p => p.id === item.product_id);
     if (product) {
         item.harga = product.harga;
-        // In real app, fetch stock for selected warehouse
-        item.current_stock = 100; 
+        // Use a more robust way to get stock
+        item.current_stock = product.stocks[form.warehouse_id] || product.stocks[String(form.warehouse_id)] || 0;
         updateSubtotal(index);
     }
 };
+
+// Also update stock if warehouse changes
+watch(() => form.warehouse_id, (newWarehouseId) => {
+    form.items.forEach((item) => {
+        if (item.product_id) {
+            const product = props.products.find(p => p.id === item.product_id);
+            if (product && product.stocks) {
+                item.current_stock = product.stocks[newWarehouseId] || product.stocks[String(newWarehouseId)] || 0;
+            }
+        }
+    });
+});
 
 const updateSubtotal = (index) => {
     const item = form.items[index];
@@ -126,7 +141,7 @@ const submit = () => {
                             </select>
                             <InputError :message="form.errors.warehouse_id" />
                         </div>
-                        <div class="md:col-span-2 space-y-2">
+                        <div class="md:col-span-2 space-y-2 text-indigo-600">
                             <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Customer</label>
                             <select v-model="form.customer_id" class="input-base font-black">
                                 <option value="">Pilih Customer...</option>
@@ -135,12 +150,37 @@ const submit = () => {
                             <InputError :message="form.errors.customer_id" />
                         </div>
                         <div class="space-y-2">
-                            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Termin Pembayaran</label>
-                            <select v-model="form.payment_term" class="input-base font-black">
-                                <option value="cash">Cash (Tunai)</option>
-                                <option value="tempo_30">Tempo 30 Hari</option>
-                                <option value="tempo_60">Tempo 60 Hari</option>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nomor PO / Referensi</label>
+                            <input type="text" v-model="form.po_number" placeholder="Contoh: PO-2026-0042" class="input-base font-black placeholder:text-slate-300">
+                            <InputError :message="form.errors.po_number" />
+                        </div>
+                        <div class="space-y-2">
+                            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Jenis Pembayaran <span class="text-rose-400">*</span></label>
+                            <select v-model="form.jenis_pembayaran" class="input-base font-black">
+                                <option value="cash">💵 Cash (Langsung Lunas)</option>
+                                <option value="tempo">🗓️ Tempo (Kredit)</option>
                             </select>
+                            <InputError :message="form.errors.jenis_pembayaran" />
+                        </div>
+                        <div v-if="form.jenis_pembayaran === 'tempo'" class="space-y-2">
+                            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tempo (Hari)</label>
+                            <div class="flex gap-2 items-center">
+                                <input type="number" v-model="form.tempo_hari" min="1" max="180" class="input-base font-black w-24 text-center">
+                                <div class="flex gap-1">
+                                    <button type="button" @click="form.tempo_hari = 14" class="px-2.5 py-2 text-[9px] font-black bg-slate-100 rounded-lg hover:bg-indigo-50 hover:text-indigo-600 transition">14</button>
+                                    <button type="button" @click="form.tempo_hari = 30" class="px-2.5 py-2 text-[9px] font-black bg-slate-100 rounded-lg hover:bg-indigo-50 hover:text-indigo-600 transition">30</button>
+                                    <button type="button" @click="form.tempo_hari = 45" class="px-2.5 py-2 text-[9px] font-black bg-slate-100 rounded-lg hover:bg-indigo-50 hover:text-indigo-600 transition">45</button>
+                                    <button type="button" @click="form.tempo_hari = 60" class="px-2.5 py-2 text-[9px] font-black bg-slate-100 rounded-lg hover:bg-indigo-50 hover:text-indigo-600 transition">60</button>
+                                </div>
+                            </div>
+                            <p class="text-[9px] text-slate-400 font-bold ml-1">Jatuh tempo: {{ form.tanggal ? new Date(new Date(form.tanggal).getTime() + form.tempo_hari * 86400000).toLocaleDateString('id-ID', {day:'numeric',month:'long',year:'numeric'}) : '-' }}</p>
+                            <InputError :message="form.errors.tempo_hari" />
+                        </div>
+                        <div v-else class="space-y-2">
+                            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Status Bayar</label>
+                            <div class="input-base !bg-emerald-50 !border-emerald-100 font-black text-emerald-700 flex items-center gap-2">
+                                ✓ Lunas hari ini
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -186,7 +226,7 @@ const submit = () => {
                             </div>
                             <div class="flex justify-between items-center pt-4 border-t border-slate-100">
                                 <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Subtotal</span>
-                                <span class="text-sm font-black text-slate-900 tracking-tight">Rp {{ item.subtotal.toLocaleString('id-ID') }}</span>
+                                <span class="text-sm font-black text-slate-900 tracking-tight">{{ new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(item.subtotal) }}</span>
                             </div>
                         </div>
                         <button @click="addItem" class="w-full py-4 border-2 border-dashed border-indigo-100 text-indigo-600 font-black text-xs uppercase tracking-[0.2em] rounded-2xl hover:bg-indigo-50 transition flex items-center justify-center gap-2 active:scale-95">
@@ -216,7 +256,10 @@ const submit = () => {
                                         </select>
                                     </td>
                                     <td class="py-4 pr-4">
-                                        <span :class="[
+                                        <div v-if="!form.warehouse_id" class="flex items-center gap-1 text-[9px] font-black text-amber-500 uppercase italic">
+                                            <PhWarningCircle :size="12" /> Pilih Gudang
+                                        </div>
+                                        <span v-else :class="[
                                             'text-[10px] font-black uppercase tracking-tighter px-2 py-1 rounded-lg',
                                             item.quantity > item.current_stock ? 'bg-rose-100 text-rose-600' : 'bg-slate-100 text-slate-500'
                                         ]">
@@ -232,7 +275,7 @@ const submit = () => {
                                             <input type="number" v-model="item.harga" @input="updateSubtotal(index)" class="input-base !py-2 !pl-8 text-xs font-black text-right">
                                         </div>
                                     </td>
-                                    <td class="py-4 pr-4 font-black text-slate-900 text-sm text-right">Rp {{ item.subtotal.toLocaleString('id-ID') }}</td>
+                                    <td class="py-4 pr-4 font-black text-slate-900 text-sm text-right">{{ new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(item.subtotal) }}</td>
                                     <td class="py-4 text-center">
                                         <button @click="removeItem(index)" class="text-slate-300 hover:text-rose-500 transition-all active:scale-90"><PhTrash :size="18" weight="bold" /></button>
                                     </td>
@@ -254,7 +297,7 @@ const submit = () => {
                             <PhReceipt :size="18" class="text-indigo-400" />
                             <p class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Total Tagihan</p>
                         </div>
-                        <h2 class="text-4xl font-black text-white mb-8 tracking-tighter">Rp {{ grandTotal.toLocaleString('id-ID') }}</h2>
+                        <h2 class="text-4xl font-black text-white mb-8 tracking-tighter">{{ new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(grandTotal) }}</h2>
                         
                         <div v-if="stockShortage" class="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-4 flex gap-3 items-start mb-8">
                             <PhWarningCircle :size="20" weight="fill" class="text-rose-500 mt-0.5 shrink-0" />

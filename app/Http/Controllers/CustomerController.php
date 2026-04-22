@@ -10,8 +10,21 @@ class CustomerController extends Controller
 {
     public function index()
     {
+        $search = request('search');
+
+        $customers = Customer::query()
+            ->when($search, function ($query, $search) {
+                $query->where('nama', 'like', "%{$search}%")
+                      ->orWhere('kontak', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%");
+            })
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
+
         return Inertia::render('MasterData/Customers', [
-            'customers' => Customer::latest()->paginate(10),
+            'customers' => $customers,
+            'filters' => request()->all('search'),
         ]);
     }
 

@@ -17,10 +17,7 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-<<<<<<< HEAD
-=======
             $table->enum('role', ['admin', 'staff_gudang', 'viewer'])->default('viewer');
->>>>>>> 5dcac91 (Refactor: Mobile-first responsive UI and performance optimization)
             $table->rememberToken();
             $table->timestamps();
         });

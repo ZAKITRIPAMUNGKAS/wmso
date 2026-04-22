@@ -2,13 +2,6 @@
 
 namespace App\Models;
 
-<<<<<<< HEAD
-use Illuminate\Database\Eloquent\Model;
-
-class Warehouse extends Model
-{
-    protected $guarded = [];
-=======
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -38,5 +31,4 @@ class Warehouse extends Model
     {
         return $this->hasMany(StockMovement::class);
     }
->>>>>>> 5dcac91 (Refactor: Mobile-first responsive UI and performance optimization)
 }

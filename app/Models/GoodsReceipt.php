@@ -13,6 +13,11 @@ class GoodsReceipt extends Model
 
     protected $guarded = [];
 
+    public function supplier(): BelongsTo
+    {
+        return $this->belongsTo(Supplier::class);
+    }
+
     public function purchaseOrder(): BelongsTo
     {
         return $this->belongsTo(PurchaseOrder::class);

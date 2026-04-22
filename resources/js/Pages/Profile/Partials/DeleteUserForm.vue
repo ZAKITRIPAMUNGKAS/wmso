@@ -1,12 +1,8 @@
 <script setup>
-import DangerButton from '@/Components/DangerButton.vue';
-import InputError from '@/Components/InputError.vue';
-import InputLabel from '@/Components/InputLabel.vue';
 import Modal from '@/Components/Modal.vue';
-import SecondaryButton from '@/Components/SecondaryButton.vue';
-import TextInput from '@/Components/TextInput.vue';
 import { useForm } from '@inertiajs/vue3';
 import { nextTick, ref } from 'vue';
+import { PhTrash, PhX } from "@phosphor-icons/vue";
 
 const confirmingUserDeletion = ref(false);
 const passwordInput = ref(null);
@@ -17,7 +13,6 @@ const form = useForm({
 
 const confirmUserDeletion = () => {
     confirmingUserDeletion.value = true;
-
     nextTick(() => passwordInput.value.focus());
 };
 
@@ -32,75 +27,66 @@ const deleteUser = () => {
 
 const closeModal = () => {
     confirmingUserDeletion.value = false;
-
     form.clearErrors();
     form.reset();
 };
 </script>
 
 <template>
-    <section class="space-y-6">
-        <header>
-            <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">
-                Delete Account
+    <section>
+        <header class="mb-6">
+            <h2 class="text-sm font-black text-rose-800 uppercase tracking-widest">
+                Hapus Akun
             </h2>
-
-            <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                Once your account is deleted, all of its resources and data will
-                be permanently deleted. Before deleting your account, please
-                download any data or information that you wish to retain.
+            <p class="mt-1 text-xs font-bold text-rose-400/80 leading-relaxed uppercase tracking-wider">
+                Setelah akun Anda dihapus, semua data dan sumber dayanya akan dihapus secara permanen.
             </p>
         </header>
 
-        <DangerButton @click="confirmUserDeletion">Delete Account</DangerButton>
+        <button 
+            @click="confirmUserDeletion"
+            class="bg-rose-600 hover:bg-rose-700 text-white px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition shadow-xl shadow-rose-500/25 flex items-center gap-2 active:scale-95"
+        >
+            <PhTrash :size="18" weight="bold" />
+            <span>Hapus Akun Permanen</span>
+        </button>
 
         <Modal :show="confirmingUserDeletion" @close="closeModal">
-            <div class="p-6">
-                <h2
-                    class="text-lg font-medium text-gray-900 dark:text-gray-100"
-                >
-                    Are you sure you want to delete your account?
+            <div class="p-8 font-sans">
+                <h2 class="text-xl font-black text-slate-800 tracking-tight">
+                    Apakah Anda yakin ingin menghapus akun?
                 </h2>
 
-                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                    Once your account is deleted, all of its resources and data
-                    will be permanently deleted. Please enter your password to
-                    confirm you would like to permanently delete your account.
+                <p class="mt-2 text-xs font-bold text-slate-500 leading-relaxed uppercase tracking-wider">
+                    Setelah akun Anda dihapus, semua sumber daya dan datanya akan dihapus secara permanen. Silakan masukkan kata sandi Anda untuk mengonfirmasi bahwa Anda ingin menghapus akun secara permanen.
                 </p>
 
                 <div class="mt-6">
-                    <InputLabel
-                        for="password"
-                        value="Password"
-                        class="sr-only"
-                    />
-
-                    <TextInput
-                        id="password"
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Konfirmasi Kata Sandi</label>
+                    <input
                         ref="passwordInput"
                         v-model="form.password"
                         type="password"
-                        class="mt-1 block w-3/4"
-                        placeholder="Password"
+                        class="input-base w-full font-bold text-slate-700"
+                        placeholder="Masukkan sandi Anda"
                         @keyup.enter="deleteUser"
                     />
-
-                    <InputError :message="form.errors.password" class="mt-2" />
+                    <p v-if="form.errors.password" class="mt-2 text-[10px] font-black text-rose-500 uppercase tracking-widest">{{ form.errors.password }}</p>
                 </div>
 
-                <div class="mt-6 flex justify-end">
-                    <SecondaryButton @click="closeModal">
-                        Cancel
-                    </SecondaryButton>
+                <div class="mt-8 flex justify-end gap-3">
+                    <button @click="closeModal" class="px-6 py-3 rounded-xl text-slate-400 hover:text-slate-600 font-black text-xs uppercase tracking-widest transition active:scale-95">
+                        Batal
+                    </button>
 
-                    <DangerButton
-                        class="ms-3"
-                        :class="{ 'opacity-25': form.processing }"
+                    <button
                         :disabled="form.processing"
                         @click="deleteUser"
+                        class="bg-rose-600 hover:bg-rose-700 text-white px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition shadow-xl shadow-rose-500/25 flex items-center gap-2 active:scale-95 disabled:opacity-50"
                     >
-                        Delete Account
-                    </DangerButton>
+                        <PhTrash :size="18" weight="bold" />
+                        <span>Hapus Sekarang</span>
+                    </button>
                 </div>
             </div>
         </Modal>

@@ -11,14 +11,31 @@ class InvoiceController extends Controller
 {
     public function index()
     {
+        $search = request('search');
+
+        $invoices = Invoice::query()
+            ->with(['deliveryOrder.customer', 'deliveryOrder.warehouse'])
+            ->when($search, function ($query, $search) {
+                $query->where('no_invoice', 'like', "%{$search}%")
+                      ->orWhereHas('deliveryOrder.customer', function ($q) use ($search) {
+                          $q->where('nama', 'like', "%{$search}%");
+                      });
+            })
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
+
         return Inertia::render('Invoices/Index', [
-            'invoices' => Invoice::with(['deliveryOrder.customer', 'deliveryOrder.warehouse'])->latest()->paginate(10),
+            'invoices' => $invoices,
+            'filters' => request()->all('search'),
         ]);
     }
 
     public function show(Invoice $invoice)
     {
-        return $invoice->load(['deliveryOrder.customer', 'deliveryOrder.warehouse', 'deliveryOrder.items.product', 'payments']);
+        return Inertia::render('Invoices/Show', [
+            'invoice' => $invoice->load(['deliveryOrder.customer', 'deliveryOrder.warehouse', 'deliveryOrder.items.product', 'payments'])
+        ]);
     }
 
     public function downloadPdf(Invoice $invoice)

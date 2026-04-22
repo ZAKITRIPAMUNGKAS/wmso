@@ -106,11 +106,6 @@ const submit = () => {
             </button>
         </form>
 
-        <div class="mt-8 md:mt-12 text-center">
-            <p class="text-[11px] md:text-sm font-bold text-slate-500 uppercase tracking-wider">
-                Belum punya akun? 
-                <a href="#" class="text-indigo-400 hover:text-indigo-300 font-black transition-colors ml-1 underline decoration-indigo-400/30 underline-offset-4">Hubungi Admin</a>
-            </p>
-        </div>
+
     </GuestLayout>
 </template>

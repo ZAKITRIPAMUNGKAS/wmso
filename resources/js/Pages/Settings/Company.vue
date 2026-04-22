@@ -33,6 +33,7 @@ const form = useForm({
 const submit = () => {
     form.post(route('settings.company.update'), {
         preserveScroll: true,
+        forceFormData: true,
         onSuccess: () => {
             // Toast or notification logic
         }
@@ -47,9 +48,8 @@ const groups = [
 </script>
 
 <template>
-    <Head title="Pengaturan Perusahaan" />
-
     <AuthenticatedLayout title="Pengaturan Perusahaan">
+        <Head title="Pengaturan Perusahaan" />
         <div class="max-w-4xl mx-auto font-sans">
             <div class="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
                 <div class="flex items-center gap-3">
@@ -85,6 +85,20 @@ const groups = [
                                       v-model="form.settings[setting.key]"
                                       rows="3"
                                       class="input-base font-bold text-slate-700 py-4 min-h-[100px] resize-none"></textarea>
+
+                            <div v-else-if="setting.type === 'file'" class="flex flex-col gap-4">
+                                <div v-if="form.settings[setting.key] && typeof form.settings[setting.key] === 'string'" class="w-32 h-32 rounded-2xl border-2 border-slate-100 overflow-hidden bg-slate-50 relative group">
+                                    <img :src="'/storage/' + form.settings[setting.key]" class="w-full h-full object-contain">
+                                    <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                        <p class="text-[8px] font-black text-white uppercase tracking-widest">Logo Saat Ini</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <input type="file" 
+                                           @input="form.settings[setting.key] = $event.target.files[0]"
+                                           class="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-black file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 text-slate-400 text-xs">
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

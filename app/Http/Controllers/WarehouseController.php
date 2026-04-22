@@ -10,8 +10,20 @@ class WarehouseController extends Controller
 {
     public function index()
     {
+        $search = request('search');
+
+        $warehouses = Warehouse::query()
+            ->when($search, function ($query, $search) {
+                $query->where('nama', 'like', "%{$search}%")
+                      ->orWhere('kode_gudang', 'like', "%{$search}%");
+            })
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
+
         return Inertia::render('MasterData/Warehouses', [
-            'warehouses' => Warehouse::latest()->paginate(10),
+            'warehouses' => $warehouses,
+            'filters' => request()->all('search'),
         ]);
     }
 

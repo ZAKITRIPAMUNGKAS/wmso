@@ -38,17 +38,20 @@ const isActive = (route_name) => {
     </Transition>
 
     <aside :class="[
-        'fixed lg:sticky top-0 left-0 z-50 w-72 lg:w-[280px] h-screen bg-slate-900 border-r border-slate-800 flex flex-col transition-transform duration-300 ease-in-out shrink-0 overflow-hidden',
+        'fixed lg:sticky top-0 left-0 z-50 w-72 lg:w-[280px] h-screen bg-slate-900 border-r border-slate-800 flex flex-col transition-transform duration-300 ease-in-out shrink-0 overflow-hidden print:hidden',
         uiStore.sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
     ]">
         <div class="h-16 flex items-center justify-between px-6 border-b border-slate-800">
-            <div class="flex items-center">
-                <PhPackage :size="24" weight="fill" class="text-indigo-500 mr-3" />
-                <div class="flex flex-col">
-                    <span class="text-white font-bold text-base tracking-wide leading-tight">{{ $page.props.company.short_name }}</span>
-                    <span class="text-[10px] text-slate-500 font-medium uppercase tracking-wider">{{ $page.props.company.tagline }}</span>
+            <Link :href="route('dashboard')" class="flex items-center group">
+                <div v-if="$page.props.company.logo" class="w-9 h-9 rounded-xl overflow-hidden bg-white p-1.5 mr-3 shadow-lg shadow-indigo-500/10 group-hover:scale-105 transition-transform">
+                    <img :src="'/storage/' + $page.props.company.logo" class="w-full h-full object-contain" alt="Logo">
                 </div>
-            </div>
+                <PhPackage v-else :size="24" weight="fill" class="text-indigo-500 mr-3 group-hover:scale-110 transition-transform" />
+                <div class="flex flex-col">
+                    <span class="text-white font-bold text-sm tracking-wide leading-tight truncate max-w-[140px]">{{ $page.props.company.short_name }}</span>
+                    <span class="text-[9px] text-slate-500 font-medium uppercase tracking-wider truncate max-w-[140px]">{{ $page.props.company.tagline }}</span>
+                </div>
+            </Link>
             <button @click="uiStore.closeSidebar()" class="lg:hidden p-2 text-slate-400 hover:text-white">
                 <PhX :size="24" weight="bold" />
             </button>

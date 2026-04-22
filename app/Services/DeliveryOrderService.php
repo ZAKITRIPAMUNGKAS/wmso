@@ -23,6 +23,7 @@ class DeliveryOrderService
             // 1. Create DO
             $do = DeliveryOrder::create([
                 'no_sj' => $this->generateNoSj(),
+                'po_number' => $data['po_number'] ?? null,
                 'customer_id' => $data['customer_id'],
                 'warehouse_id' => $data['warehouse_id'],
                 'tanggal' => $data['tanggal'],
@@ -55,18 +56,49 @@ class DeliveryOrderService
             }
 
             // 3. Auto-generate Invoice
+            $jenisPembayaran = $data['jenis_pembayaran'] ?? 'tempo';
+            $tempoHari       = (int) ($data['tempo_hari'] ?? 30);
+            $tanggalDO       = \Carbon\Carbon::parse($do->tanggal);
+
+            // Cash → tempo hari = 0, due_date = hari yang sama
+            // Tempo → due_date = tanggal + tempo_hari
+            if ($jenisPembayaran === 'cash') {
+                $tempoHari = 0;
+                $dueDate   = $tanggalDO->format('Y-m-d');
+            } else {
+                $dueDate = $data['due_date'] ?? $tanggalDO->addDays($tempoHari)->format('Y-m-d');
+            }
+
             Invoice::create([
-                'no_invoice' => str_replace('SJ', 'INV', $do->no_sj),
+                'no_invoice'        => str_replace('SJ', 'INV', $do->no_sj),
                 'delivery_order_id' => $do->id,
-                'tanggal' => $do->tanggal,
-                'total' => $do->total,
-                'paid_amount' => 0,
-                'status' => 'belum_lunas',
-                'payment_term' => $do->payment_term,
-                'due_date' => $data['due_date'] ?? null
+                'tanggal'           => $do->tanggal,
+                'total'             => $do->total,
+                'paid_amount'       => 0,
+                'status'            => 'belum_lunas',
+                'payment_term'      => $do->payment_term,
+                'jenis_pembayaran'  => $jenisPembayaran,
+                'tempo_hari'        => $tempoHari,
+                'due_date'          => $dueDate,
             ]);
 
             return $do;
+        });
+    }
+
+    public function deleteDeliveryOrder(DeliveryOrder $do)
+    {
+        return DB::transaction(function () use ($do) {
+            // 1. Remove stock adjustments and related movements
+            $this->stockService->removeStockAdjustment('delivery_order', $do->id);
+
+            // 2. Delete Invoice if exists
+            if ($do->invoice) {
+                $do->invoice->delete();
+            }
+
+            // 3. Delete DO
+            return $do->delete();
         });
     }
 

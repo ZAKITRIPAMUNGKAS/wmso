@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Illuminate\Http\Request;
 use Inertia\Middleware;
+use Inertia\Inertia;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -44,6 +45,51 @@ class HandleInertiaRequests extends Middleware
                 'phone_secondary' => company('phone_secondary'),
                 'email'       => company('email'),
                 'website'     => company('website'),
+                'logo'        => company('company_logo'),
+            ],
+            'notifications' => fn() => 
+                $request->user() === null ? [] :
+                \Illuminate\Support\Facades\Cache::remember('user_notifications_' . $request->user()->id, 60, function() use ($request) {
+                    if (\Illuminate\Support\Facades\Cache::has('notifications_dismissed_at_' . $request->user()->id)) {
+                        return [];
+                    }
+                    return [
+                        // 1. Low Stock (Using Scope)
+                        ...\App\Models\Product::lowStock(10)
+                            ->limit(2)
+                            ->get()
+                            ->map(fn($p) => [
+                                'id' => 'low-stock-'.$p->id,
+                                'title' => 'Stok Menipis',
+                                'message' => "Produk {$p->nama} sisa " . ($p->total_stock ?? 0) . " unit.",
+                                'time' => 'Perlu restok',
+                                'type' => 'warning'
+                            ]),
+
+                        // 2. Recent Goods Receipts
+                        ...\App\Models\GoodsReceipt::latest()->limit(2)->get()->map(fn($gr) => [
+                            'id' => 'gr-'.$gr->id,
+                            'title' => 'Barang Masuk',
+                            'message' => "Penerimaan {$gr->no_receipt} telah diproses.",
+                            'time' => $gr->created_at->diffForHumans(),
+                            'type' => 'success'
+                        ]),
+
+                        // 3. Overdue Invoices
+                        ...\App\Models\Invoice::where('status', '!=', 'lunas')
+                            ->where('due_date', '<=', now())
+                            ->limit(2)->get()->map(fn($inv) => [
+                                'id' => 'inv-'.$inv->id,
+                                'title' => 'Tagihan Jatuh Tempo',
+                                'message' => "Invoice {$inv->no_invoice} telah melewati jatuh tempo.",
+                                'time' => \Carbon\Carbon::parse($inv->due_date)->diffForHumans(),
+                                'type' => 'error'
+                            ]),
+                    ];
+                }),
+            'flash' => [
+                'success' => $request->session()->get('success'),
+                'error' => $request->session()->get('error'),
             ],
         ];
     }

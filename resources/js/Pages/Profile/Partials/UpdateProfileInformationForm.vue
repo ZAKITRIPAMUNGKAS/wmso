@@ -1,9 +1,6 @@
 <script setup>
-import InputError from '@/Components/InputError.vue';
-import InputLabel from '@/Components/InputLabel.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import TextInput from '@/Components/TextInput.vue';
 import { Link, useForm, usePage } from '@inertiajs/vue3';
+import { PhCheckCircle } from "@phosphor-icons/vue";
 
 defineProps({
     mustVerifyEmail: {
@@ -24,86 +21,89 @@ const form = useForm({
 
 <template>
     <section>
-        <header>
-            <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">
-                Profile Information
+        <header class="mb-6">
+            <h2 class="text-sm font-black text-slate-800 uppercase tracking-widest">
+                Informasi Personal
             </h2>
-
-            <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                Update your account's profile information and email address.
+            <p class="mt-1 text-xs font-bold text-slate-400 leading-relaxed uppercase tracking-wider">
+                Perbarui nama akun dan alamat email terdaftar Anda.
             </p>
         </header>
 
         <form
             @submit.prevent="form.patch(route('profile.update'))"
-            class="mt-6 space-y-6"
+            class="space-y-6"
         >
             <div>
-                <InputLabel for="name" value="Name" />
-
-                <TextInput
-                    id="name"
-                    type="text"
-                    class="mt-1 block w-full"
+                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Nama Lengkap</label>
+                <input
                     v-model="form.name"
+                    type="text"
+                    class="input-base w-full font-bold text-slate-700"
                     required
                     autofocus
                     autocomplete="name"
                 />
-
-                <InputError class="mt-2" :message="form.errors.name" />
+                <p v-if="form.errors.name" class="mt-2 text-[10px] font-black text-rose-500 uppercase tracking-widest">{{ form.errors.name }}</p>
             </div>
 
             <div>
-                <InputLabel for="email" value="Email" />
-
-                <TextInput
-                    id="email"
-                    type="email"
-                    class="mt-1 block w-full"
+                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Alamat Email</label>
+                <input
                     v-model="form.email"
+                    type="email"
+                    class="input-base w-full font-bold text-slate-700"
                     required
                     autocomplete="username"
                 />
-
-                <InputError class="mt-2" :message="form.errors.email" />
+                <p v-if="form.errors.email" class="mt-2 text-[10px] font-black text-rose-500 uppercase tracking-widest">{{ form.errors.email }}</p>
             </div>
 
             <div v-if="mustVerifyEmail && user.email_verified_at === null">
-                <p class="mt-2 text-sm text-gray-800 dark:text-gray-200">
-                    Your email address is unverified.
-                    <Link
-                        :href="route('verification.send')"
-                        method="post"
-                        as="button"
-                        class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:text-gray-400 dark:hover:text-gray-100 dark:focus:ring-offset-gray-800"
-                    >
-                        Click here to re-send the verification email.
-                    </Link>
-                </p>
+                <div class="p-4 bg-amber-50 rounded-2xl border border-amber-100 mt-4">
+                    <p class="text-xs font-bold text-amber-700 leading-relaxed">
+                        Alamat email Anda belum diverifikasi.
+                        <Link
+                            :href="route('verification.send')"
+                            method="post"
+                            as="button"
+                            class="ml-1 text-indigo-600 underline hover:text-indigo-800 focus:outline-none transition"
+                        >
+                            Klik di sini untuk mengirim ulang email verifikasi.
+                        </Link>
+                    </p>
 
-                <div
-                    v-show="status === 'verification-link-sent'"
-                    class="mt-2 text-sm font-medium text-green-600 dark:text-green-400"
-                >
-                    A new verification link has been sent to your email address.
+                    <div
+                        v-show="status === 'verification-link-sent'"
+                        class="mt-2 text-xs font-black text-emerald-600 uppercase tracking-widest"
+                    >
+                        Link verifikasi baru telah dikirim ke alamat email Anda.
+                    </div>
                 </div>
             </div>
 
-            <div class="flex items-center gap-4">
-                <PrimaryButton :disabled="form.processing">Save</PrimaryButton>
+            <div class="flex items-center gap-4 pt-2">
+                <button 
+                    type="submit"
+                    :disabled="form.processing"
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition shadow-xl shadow-indigo-500/25 flex items-center gap-2 active:scale-95 disabled:opacity-50"
+                >
+                    <PhCheckCircle :size="18" weight="bold" />
+                    <span>Simpan Perubahan</span>
+                </button>
 
                 <Transition
-                    enter-active-class="transition ease-in-out"
-                    enter-from-class="opacity-0"
-                    leave-active-class="transition ease-in-out"
+                    enter-active-class="transition duration-500 ease-out"
+                    enter-from-class="opacity-0 translate-x-2"
+                    leave-active-class="transition ease-in"
                     leave-to-class="opacity-0"
                 >
                     <p
                         v-if="form.recentlySuccessful"
-                        class="text-sm text-gray-600 dark:text-gray-400"
+                        class="text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1.5"
                     >
-                        Saved.
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+                        Profil Berhasil Diperbarui
                     </p>
                 </Transition>
             </div>

@@ -1,10 +1,7 @@
 <script setup>
-import InputError from '@/Components/InputError.vue';
-import InputLabel from '@/Components/InputLabel.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import TextInput from '@/Components/TextInput.vue';
 import { useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
+import { PhLockKey, PhCheckCircle } from "@phosphor-icons/vue";
 
 const passwordInput = ref(null);
 const currentPasswordInput = ref(null);
@@ -35,85 +32,73 @@ const updatePassword = () => {
 
 <template>
     <section>
-        <header>
-            <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">
-                Update Password
+        <header class="mb-6">
+            <h2 class="text-sm font-black text-slate-800 uppercase tracking-widest">
+                Update Keamanan
             </h2>
-
-            <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                Ensure your account is using a long, random password to stay
-                secure.
+            <p class="mt-1 text-xs font-bold text-slate-400 leading-relaxed uppercase tracking-wider">
+                Gunakan kata sandi yang kuat dan acak untuk menjaga keamanan akun Anda.
             </p>
         </header>
 
-        <form @submit.prevent="updatePassword" class="mt-6 space-y-6">
+        <form @submit.prevent="updatePassword" class="space-y-6">
             <div>
-                <InputLabel for="current_password" value="Current Password" />
-
-                <TextInput
-                    id="current_password"
+                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Kata Sandi Saat Ini</label>
+                <input
                     ref="currentPasswordInput"
                     v-model="form.current_password"
                     type="password"
-                    class="mt-1 block w-full"
+                    class="input-base w-full font-bold text-slate-700"
                     autocomplete="current-password"
                 />
-
-                <InputError
-                    :message="form.errors.current_password"
-                    class="mt-2"
-                />
+                <p v-if="form.errors.current_password" class="mt-2 text-[10px] font-black text-rose-500 uppercase tracking-widest">{{ form.errors.current_password }}</p>
             </div>
 
             <div>
-                <InputLabel for="password" value="New Password" />
-
-                <TextInput
-                    id="password"
+                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Kata Sandi Baru</label>
+                <input
                     ref="passwordInput"
                     v-model="form.password"
                     type="password"
-                    class="mt-1 block w-full"
+                    class="input-base w-full font-bold text-slate-700"
                     autocomplete="new-password"
                 />
-
-                <InputError :message="form.errors.password" class="mt-2" />
+                <p v-if="form.errors.password" class="mt-2 text-[10px] font-black text-rose-500 uppercase tracking-widest">{{ form.errors.password }}</p>
             </div>
 
             <div>
-                <InputLabel
-                    for="password_confirmation"
-                    value="Confirm Password"
-                />
-
-                <TextInput
-                    id="password_confirmation"
+                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Konfirmasi Kata Sandi</label>
+                <input
                     v-model="form.password_confirmation"
                     type="password"
-                    class="mt-1 block w-full"
+                    class="input-base w-full font-bold text-slate-700"
                     autocomplete="new-password"
                 />
-
-                <InputError
-                    :message="form.errors.password_confirmation"
-                    class="mt-2"
-                />
+                <p v-if="form.errors.password_confirmation" class="mt-2 text-[10px] font-black text-rose-500 uppercase tracking-widest">{{ form.errors.password_confirmation }}</p>
             </div>
 
-            <div class="flex items-center gap-4">
-                <PrimaryButton :disabled="form.processing">Save</PrimaryButton>
+            <div class="flex items-center gap-4 pt-2">
+                <button 
+                    type="submit"
+                    :disabled="form.processing"
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition shadow-xl shadow-indigo-500/25 flex items-center gap-2 active:scale-95 disabled:opacity-50"
+                >
+                    <PhLockKey :size="18" weight="bold" />
+                    <span>Perbarui Kata Sandi</span>
+                </button>
 
                 <Transition
-                    enter-active-class="transition ease-in-out"
-                    enter-from-class="opacity-0"
-                    leave-active-class="transition ease-in-out"
+                    enter-active-class="transition duration-500 ease-out"
+                    enter-from-class="opacity-0 translate-x-2"
+                    leave-active-class="transition ease-in"
                     leave-to-class="opacity-0"
                 >
                     <p
                         v-if="form.recentlySuccessful"
-                        class="text-sm text-gray-600 dark:text-gray-400"
+                        class="text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1.5"
                     >
-                        Saved.
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+                        Sandi Berhasil Diubah
                     </p>
                 </Transition>
             </div>

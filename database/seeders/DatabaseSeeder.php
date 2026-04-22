@@ -2,53 +2,11 @@
 
 namespace Database\Seeders;
 
-<<<<<<< HEAD
-use Illuminate\Database\Seeder;
+use App\Models\User;
 use App\Models\Product;
 use App\Models\Supplier;
 use App\Models\Customer;
 use App\Models\Warehouse;
-
-class DatabaseSeeder extends Seeder
-{
-    public function run(): void
-    {
-        Product::create([
-            'name' => 'Kabel UTP Cat 6',
-            'brand' => 'Belden',
-            'type' => 'Indoor',
-            'unit' => 'Roll',
-            'price' => 1200000,
-            'stock' => 50
-        ]);
-
-        Product::create([
-            'name' => 'Router MikroTik',
-            'brand' => 'MikroTik',
-            'type' => 'hAP ac2',
-            'unit' => 'Pcs',
-            'price' => 1100000,
-            'stock' => 12
-        ]);
-
-        Supplier::create([
-            'name' => 'PT Teknologi Maju',
-            'address' => 'Jakarta Industrial Estate Pulogadung',
-            'phone' => '021-1234567'
-        ]);
-
-        Customer::create([
-            'name' => 'CV Jaya Abadi',
-            'address' => 'Jl. Sudirman No. 10, Jakarta',
-            'phone' => '0812-9876-5432'
-        ]);
-
-        Warehouse::create([
-            'code' => 'GDG-01',
-            'name' => 'Gudang Utama Jakarta',
-            'location' => 'Jakarta Timur'
-=======
-use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -61,12 +19,55 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        User::factory()->create([
+            'name' => 'Admin WMS',
+            'email' => 'admin@example.com',
+            'password' => bcrypt('password'),
+            'role' => 'admin',
+        ]);
 
         User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
->>>>>>> 5dcac91 (Refactor: Mobile-first responsive UI and performance optimization)
+            'name' => 'Staff Gudang',
+            'email' => 'staff@example.com',
+            'password' => bcrypt('password'),
+            'role' => 'staff_gudang',
         ]);
+
+        User::factory()->create([
+            'name' => 'Viewer User',
+            'email' => 'viewer@example.com',
+            'password' => bcrypt('password'),
+            'role' => 'viewer',
+        ]);
+
+        Product::create([
+            'kode_barang' => 'BRG-001',
+            'nama' => 'Kabel UTP Cat 6',
+            'merk' => 'Belden',
+            'tipe' => 'Indoor',
+            'satuan' => 'Roll',
+            'harga' => 1200000,
+            'stok_minimum' => 5,
+        ]);
+
+        Supplier::create([
+            'nama' => 'PT Teknologi Maju',
+            'kontak' => '021-1234567',
+            'alamat' => 'Jakarta Industrial Estate Pulogadung',
+        ]);
+
+        Customer::create([
+            'nama' => 'CV Jaya Abadi',
+            'alamat' => 'Jl. Sudirman No. 10, Jakarta',
+            'kontak' => '0812-9876-5432',
+        ]);
+
+        Warehouse::create([
+            'kode_gudang' => 'GDG-01',
+            'nama' => 'Gudang Utama Jakarta',
+            'alamat' => 'Jakarta Timur',
+        ]);
+
+        $this->call(CompanySettingsSeeder::class);
     }
 }

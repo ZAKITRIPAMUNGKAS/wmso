@@ -10,8 +10,21 @@ class SupplierController extends Controller
 {
     public function index()
     {
+        $search = request('search');
+
+        $suppliers = Supplier::query()
+            ->when($search, function ($query, $search) {
+                $query->where('nama', 'like', "%{$search}%")
+                      ->orWhere('kontak', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%");
+            })
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
+
         return Inertia::render('MasterData/Suppliers', [
-            'suppliers' => Supplier::latest()->paginate(10),
+            'suppliers' => $suppliers,
+            'filters' => request()->all('search'),
         ]);
     }
 

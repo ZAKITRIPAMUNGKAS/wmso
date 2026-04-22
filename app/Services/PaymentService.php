@@ -13,12 +13,13 @@ class PaymentService
     {
         return DB::transaction(function () use ($data) {
             $payment = Payment::create([
-                'invoice_id' => $data['invoice_id'],
-                'tanggal' => $data['tanggal'],
-                'nominal' => $data['nominal'],
-                'metode' => $data['metode'],
-                'keterangan' => $data['keterangan'] ?? null,
-                'user_id' => Auth::id()
+                'invoice_id'  => $data['invoice_id'],
+                'tanggal'     => $data['tanggal'],
+                'nominal'     => $data['nominal'],
+                'metode'      => $data['metode'],
+                'keterangan'  => $data['keterangan'] ?? null,
+                'bukti_bayar' => $data['bukti_bayar'] ?? null,
+                'user_id'     => Auth::id()
             ]);
 
             $invoice = Invoice::lockForUpdate()->find($data['invoice_id']);

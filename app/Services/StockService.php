@@ -55,6 +55,37 @@ class StockService
         });
     }
 
+    public function removeStockAdjustment(string $referenceType, int $referenceId)
+    {
+        return DB::transaction(function () use ($referenceType, $referenceId) {
+            $movements = StockMovement::where('reference_type', $referenceType)
+                ->where('reference_id', $referenceId)
+                ->get();
+
+            foreach ($movements as $movement) {
+                $stock = ProductStock::where('product_id', $movement->product_id)
+                    ->where('warehouse_id', $movement->warehouse_id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($stock) {
+                    // Reverse the movement
+                    if ($movement->type === 'in') {
+                        $stock->quantity -= $movement->quantity;
+                    } else {
+                        $stock->quantity += $movement->quantity;
+                    }
+                    $stock->save();
+                }
+
+                // Delete the movement record
+                $movement->delete();
+            }
+
+            return true;
+        });
+    }
+
     public function getStock(int $productId, int $warehouseId)
     {
         $stock = ProductStock::where('product_id', $productId)

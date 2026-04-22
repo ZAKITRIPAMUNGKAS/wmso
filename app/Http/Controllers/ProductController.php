@@ -10,8 +10,20 @@ class ProductController extends Controller
 {
     public function index()
     {
+        $search = request('search');
+        
+        $products = Product::query()
+            ->withSum('stocks as total_stock', 'quantity')
+            ->when($search, function ($query, $search) {
+                $query->where('nama', 'like', "%{$search}%")
+                      ->orWhere('kode_barang', 'like', "%{$search}%");
+            })
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
+
         return Inertia::render('MasterData/Products', [
-            'products' => Product::latest()->paginate(10),
+            'products' => $products,
             'filters' => request()->all('search'),
         ]);
     }

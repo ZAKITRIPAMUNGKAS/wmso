@@ -11,12 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('suppliers', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->text('address')->nullable();
-            $table->string('phone')->nullable();
-            $table->timestamps();
+        Schema::table('payments', function (Blueprint $table) {
+            $table->string('metode')->default('Cash / Tunai')->change();
         });
     }
 
@@ -25,6 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('suppliers');
+        Schema::table('payments', function (Blueprint $table) {
+            $table->enum('metode', ['cash', 'transfer', 'other'])->default('cash')->change();
+        });
     }
 };
