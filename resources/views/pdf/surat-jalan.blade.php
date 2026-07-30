@@ -4,12 +4,12 @@
     <title>Surat Jalan {{ $deliveryOrder->no_sj }}</title>
     <style>
         body { font-family: 'Helvetica', sans-serif; font-size: 11px; color: #334155; line-height: 1.5; }
-        .kop-surat { border-bottom: 2px solid #4f46e5; padding-bottom: 15px; margin-bottom: 25px; }
+        .kop-surat { border-bottom: 2px solid #025cca; padding-bottom: 15px; margin-bottom: 25px; }
         .company-name { margin: 0; font-size: 20px; font-weight: bold; color: #1e293b; text-transform: uppercase; letter-spacing: -0.5px; }
         .company-info { margin: 2px 0; font-size: 10px; color: #64748b; }
         
         .title { text-align: center; font-size: 18px; font-weight: 900; margin-top: 20px; margin-bottom: 5px; color: #1e293b; text-transform: uppercase; }
-        .no-sj { text-align: center; font-size: 12px; font-weight: bold; color: #4f46e5; margin-bottom: 30px; }
+        .no-sj { text-align: center; font-size: 12px; font-weight: bold; color: #025cca; margin-bottom: 30px; }
 
         .info-table { width: 100%; margin-bottom: 30px; }
         .info-label { font-size: 9px; font-weight: bold; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
@@ -60,7 +60,7 @@
                     </tr>
                     <tr>
                         <td class="info-label">Gudang Asal</td>
-                        <td style="text-align: right; font-weight: bold; color: #4f46e5;">{{ $deliveryOrder->warehouse->nama }}</td>
+                        <td style="text-align: right; font-weight: bold; color: #025cca;">{{ $deliveryOrder->warehouse->nama }}</td>
                     </tr>
                 </table>
             </td>

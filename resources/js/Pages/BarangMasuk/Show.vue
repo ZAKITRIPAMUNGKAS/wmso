@@ -2,7 +2,8 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { computed } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
-import { PhArrowLeft, PhPrinter } from "@phosphor-icons/vue";
+import { PhArrowLeft, PhPrinter, PhGear, PhX } from "@phosphor-icons/vue";
+import { ref, reactive } from 'vue';
 
 const props = defineProps({
     receipt: Object,
@@ -22,9 +23,31 @@ const formatDate = (dateStr) => {
     return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
 };
 
+const totalItems = computed(() => props.receipt?.items?.length || 0);
+const totalQty = computed(() => {
+    return props.receipt?.items?.reduce((acc, item) => acc + (parseInt(item.quantity) || 0), 0);
+});
+
 const printPage = () => {
     window.print();
 };
+
+const currentTime = new Date().toLocaleString('id-ID', { 
+    day: '2-digit', month: '2-digit', year: 'numeric', 
+    hour: '2-digit', minute: '2-digit' 
+}).replace(',', '');
+
+const showCustomizer = ref(false);
+
+const settings = reactive({
+    docNumber: getOfficialNumber.value,
+    docDate: formatDate(props.receipt.tanggal),
+    supplierName: props.receipt.supplier ? props.receipt.supplier.nama.toUpperCase() : (props.receipt.purchase_order ? props.receipt.purchase_order.no_po : '-'),
+    senderSignatory: '', // Diserahkan Oleh
+    receiverSignatory: props.receipt.user.name.toUpperCase(), // Diterima Oleh
+    managerSignatory: '', // Mengetahui (Kepala Gudang)
+    catatan: props.receipt.catatan || 'Barang telah diperiksa kesesuaian fisik dan jumlahnya. Segala bentuk kerusakan yang ditemukan setelah dokumen ini ditandatangani akan mengikuti prosedur retur yang berlaku.'
+});
 </script>
 
 <template>
@@ -37,10 +60,93 @@ const printPage = () => {
                 <Link :href="route('barang-masuk.index')" class="text-[11px] font-bold text-slate-500 hover:text-[#1E3A5F] flex items-center gap-2 uppercase tracking-wider transition">
                     <PhArrowLeft weight="bold" /> Kembali ke Index
                 </Link>
-                <button @click="printPage" class="bg-[#1E3A5F] text-white px-6 py-2 text-[11px] font-bold uppercase tracking-widest hover:bg-[#162a45] transition shadow-sm active:scale-95">
-                    <PhPrinter weight="fill" class="inline mr-2" /> Cetak Dokumen Resmi
-                </button>
+                <div class="flex items-center gap-3">
+                    <button @click="showCustomizer = true" class="bg-white border border-slate-200 text-slate-700 px-5 py-2 text-[11px] font-bold uppercase tracking-widest hover:border-indigo-600 transition shadow-sm active:scale-95">
+                        <PhGear weight="bold" class="inline mr-2" /> Kustomisasi
+                    </button>
+                    <a :href="route('barang-masuk.pdf', receipt.id)" target="_blank" class="bg-emerald-600 text-white px-5 py-2 text-[11px] font-bold uppercase tracking-widest hover:bg-emerald-700 transition shadow-sm active:scale-95 inline-flex items-center gap-2">
+                        <PhPrinter weight="bold" /> Download PDF
+                    </a>
+                    <button @click="printPage" class="bg-[#1E3A5F] text-white px-5 py-2 text-[11px] font-bold uppercase tracking-widest hover:bg-[#162a45] transition shadow-sm active:scale-95">
+                        <PhPrinter weight="fill" class="inline mr-2" /> Cetak Langsung
+                    </button>
+                </div>
             </div>
+
+            <!-- CUSTOMIZATION SIDEBAR -->
+            <Transition
+                enter-active-class="transition duration-500 ease-out"
+                enter-from-class="opacity-0 translate-x-full"
+                enter-to-class="opacity-100 translate-x-0"
+                leave-active-class="transition duration-500 ease-in"
+                leave-from-class="opacity-100 translate-x-0"
+                leave-to-class="opacity-0 translate-x-full"
+            >
+                <div v-if="showCustomizer" class="fixed inset-y-0 right-0 w-80 bg-white shadow-[-20px_0_60px_rgba(0,0,0,0.1)] z-[100] no-print flex flex-col border-l border-slate-100">
+                    <div class="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                        <div>
+                            <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest">Kustomisasi RCP</h3>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase">Edit tampilan dokumen</p>
+                        </div>
+                        <button @click="showCustomizer = false" class="p-2 hover:bg-white rounded-lg text-slate-400 hover:text-rose-500 transition shadow-sm">
+                            <PhX :size="20" weight="bold" />
+                        </button>
+                    </div>
+                    
+                    <div class="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-hide">
+                        <!-- General Settings -->
+                        <div class="space-y-4">
+                            <p class="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Informasi Dokumen</p>
+                            
+                            <div class="space-y-1.5">
+                                <label class="text-[9px] font-black text-slate-400 uppercase">Nomor Penerimaan (RCP)</label>
+                                <input v-model="settings.docNumber" type="text" class="w-full bg-slate-50 border-none rounded-lg text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-600/20">
+                            </div>
+
+                            <div class="space-y-1.5">
+                                <label class="text-[9px] font-black text-slate-400 uppercase">Tanggal</label>
+                                <input v-model="settings.docDate" type="text" class="w-full bg-slate-50 border-none rounded-lg text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-600/20">
+                            </div>
+
+                            <div class="space-y-1.5">
+                                <label class="text-[9px] font-black text-slate-400 uppercase">Nama Supplier (Header)</label>
+                                <input v-model="settings.supplierName" type="text" class="w-full bg-slate-50 border-none rounded-lg text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-600/20">
+                            </div>
+                        </div>
+
+                        <!-- Signatory Settings -->
+                        <div class="space-y-4 pt-4 border-t border-slate-100">
+                            <p class="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Penanda Tangan</p>
+                            <div class="space-y-3">
+                                <div class="space-y-1.5">
+                                    <label class="text-[9px] font-black text-slate-400 uppercase">Diserahkan Oleh (Bawah Kiri)</label>
+                                    <input v-model="settings.senderSignatory" type="text" placeholder="Nama Supplier / Expedisi" class="w-full bg-slate-50 border-none rounded-lg text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-600/20">
+                                </div>
+                                <div class="space-y-1.5">
+                                    <label class="text-[9px] font-black text-slate-400 uppercase">Diterima Oleh (Bawah Tengah)</label>
+                                    <input v-model="settings.receiverSignatory" type="text" class="w-full bg-slate-50 border-none rounded-lg text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-600/20">
+                                </div>
+                                <div class="space-y-1.5">
+                                    <label class="text-[9px] font-black text-slate-400 uppercase">Mengetahui (Bawah Kanan)</label>
+                                    <input v-model="settings.managerSignatory" type="text" placeholder="Kepala Gudang" class="w-full bg-slate-50 border-none rounded-lg text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-600/20">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Catatan -->
+                        <div class="space-y-4 pt-4 border-t border-slate-100">
+                            <p class="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Catatan Tambahan</p>
+                            <textarea v-model="settings.catatan" rows="4" class="w-full bg-slate-50 border-none rounded-lg text-[10px] font-bold text-slate-600 focus:ring-2 focus:ring-indigo-600/20 resize-none"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="p-6 border-t border-slate-100 bg-slate-50/50">
+                        <button @click="showCustomizer = false" class="w-full bg-[#1E3A5F] text-white py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-blue-900/10 active:scale-95 transition">
+                            Simpan Perubahan
+                        </button>
+                    </div>
+                </div>
+            </Transition>
 
             <!-- OFFICIAL CORPORATE DOCUMENT CONTAINER (RCP) -->
             <div class="print-container bg-white border border-[#D1D5DB] shadow-sm relative font-business text-[#1F2937] leading-tight mx-auto overflow-hidden">
@@ -78,7 +184,7 @@ const printPage = () => {
                                 BUKTI PENERIMAAN
                             </h2>
                             <p class="text-[10px] font-sans font-bold tracking-tight text-[#4B5563]">
-                                No: {{ getOfficialNumber }}
+                                No: {{ settings.docNumber }}
                             </p>
                         </div>
                     </div>
@@ -90,11 +196,11 @@ const printPage = () => {
                         <div class="space-y-1">
                             <p><span class="font-black w-24 inline-block">PERIHAL</span> : Penerimaan Barang Masuk</p>
                             <p><span class="font-black w-24 inline-block">GUDANG</span> : {{ receipt.warehouse.nama.toUpperCase() }}</p>
-                            <p><span class="font-black w-24 inline-block">SUPPLIER</span> : {{ receipt.supplier ? receipt.supplier.nama.toUpperCase() : (receipt.purchase_order ? receipt.purchase_order.no_po : '-') }}</p>
+                            <p><span class="font-black w-24 inline-block">SUPPLIER</span> : {{ settings.supplierName }}</p>
                             <p><span class="font-black w-24 inline-block">ADMIN</span> : {{ receipt.user.name.toUpperCase() }}</p>
                         </div>
                         <div class="text-right space-y-1">
-                            <p><span class="font-black italic tracking-tighter">Jakarta,</span> {{ formatDate(receipt.tanggal) }}</p>
+                            <p><span class="font-black italic tracking-tighter">Jakarta,</span> {{ settings.docDate }}</p>
                             <div class="inline-block border-2 border-double border-[#166534] px-3 py-1 mt-2 transform -rotate-2">
                                 <span class="text-[11px] font-serif font-black text-[#166534] uppercase tracking-[0.2em]">DITERIMA</span>
                             </div>
@@ -143,7 +249,7 @@ const printPage = () => {
                             <div class="border border-[#D1D5DB] p-4 min-h-[60px] relative">
                                 <p class="absolute -top-2 left-3 bg-white px-2 text-[9px] font-black uppercase tracking-widest text-[#4B5563]">Keterangan Tambahan</p>
                                 <p class="text-[10px] leading-relaxed italic text-slate-600">
-                                    {{ receipt.catatan || 'Barang telah diperiksa kesesuaian fisik dan jumlahnya. Segala bentuk kerusakan yang ditemukan setelah dokumen ini ditandatangani akan mengikuti prosedur retur yang berlaku.' }}
+                                    {{ settings.catatan }}
                                 </p>
                             </div>
                         </div>
@@ -162,21 +268,21 @@ const printPage = () => {
                         <div class="text-center w-[200px]">
                             <p class="text-[11px] font-black mb-16 uppercase">Diserahkan Oleh,</p>
                             <div class="border-b-[1.5px] border-[#1F2937] w-full"></div>
-                            <p class="text-[11px] font-black uppercase mt-1">( ............................ )</p>
+                            <p class="text-[10px] font-black uppercase mt-1 italic tracking-widest">{{ settings.senderSignatory || '( ............................ )' }}</p>
                             <p class="text-[9px] font-sans font-bold text-slate-400 uppercase">Supplier / Expedisi</p>
                         </div>
                         
                         <div class="text-center w-[200px]">
                             <p class="text-[11px] font-black mb-16 uppercase italic">Diterima Oleh,</p>
                             <div class="border-b-[1.5px] border-[#1F2937] w-full"></div>
-                            <p class="text-[11px] font-black uppercase mt-1">{{ receipt.user.name.toUpperCase() }}</p>
+                            <p class="text-[10px] font-black uppercase mt-1 italic tracking-widest">{{ settings.receiverSignatory }}</p>
                             <p class="text-[9px] font-sans font-bold text-slate-400 uppercase tracking-widest">WMS ADMIN | ID: 00{{ receipt.user.id }}</p>
                         </div>
 
                         <div class="text-center w-[200px]">
                             <p class="text-[11px] font-black mb-16 uppercase">Mengetahui,</p>
                             <div class="border-b-[1.5px] border-[#1F2937] w-full"></div>
-                            <p class="text-[11px] font-black uppercase mt-1">( ............................ )</p>
+                            <p class="text-[10px] font-black uppercase mt-1 italic tracking-widest">{{ settings.managerSignatory || '( ............................ )' }}</p>
                             <p class="text-[9px] font-sans font-bold text-slate-400 uppercase">Kepala Gudang</p>
                         </div>
                     </div>
@@ -188,7 +294,7 @@ const printPage = () => {
                         "Dokumen ini merupakan bukti sah penerimaan barang yang diterbitkan secara otomatis oleh sistem WMS CV. Listrindo Jaya Elektrik. Segala bentuk pemalsuan akan ditindak sesuai hukum yang berlaku."
                     </p>
                     <div class="flex justify-between items-center text-[8px] font-sans font-black text-[#9CA3AF] uppercase tracking-widest border-t border-slate-200 pt-2 px-4">
-                        <span>RCP-ID: {{ getOfficialNumber }}</span>
+                        <span>RCP-ID: {{ settings.docNumber }}</span>
                         <span>HALAMAN 1 DARI 1</span>
                         <span>TGL CETAK: {{ currentTime }}</span>
                     </div>

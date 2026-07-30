@@ -14,6 +14,10 @@ class DeliveryOrder extends Model
 
     protected $guarded = [];
 
+    protected $casts = [
+        'tanggal' => 'date',
+    ];
+
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);

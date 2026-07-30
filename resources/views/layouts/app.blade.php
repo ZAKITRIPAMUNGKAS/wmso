@@ -16,7 +16,22 @@
             theme: {
                 extend: {
                     fontFamily: { sans: ['"Plus Jakarta Sans"', 'sans-serif'] },
-                    colors: { brand: '#4f46e5' }
+                    colors: {
+                        brand: '#025cca',
+                        indigo: {
+                            50: '#eef6ff',
+                            100: '#d9ebff',
+                            200: '#bce0ff',
+                            300: '#8eccff',
+                            400: '#59b2ff',
+                            500: '#025cca',
+                            600: '#02469c',
+                            700: '#0047a3',
+                            800: '#003d8a',
+                            900: '#003273',
+                            950: '#001f4d'
+                        }
+                    }
                 }
             }
         }
@@ -58,7 +73,7 @@
         <div class="p-4 border-t border-slate-800">
             <div class="flex items-center justify-between gap-3 px-3 py-2 rounded-lg bg-slate-800/50">
                 <div class="flex items-center gap-3">
-                    <img src="https://ui-avatars.com/api/?name=Tepe+Zhavarez&background=4f46e5&color=fff" class="w-9 h-9 rounded-full">
+                    <img src="https://ui-avatars.com/api/?name=Tepe+Zhavarez&background=025cca&color=fff" class="w-9 h-9 rounded-full">
                     <div class="truncate">
                         <p class="text-sm font-semibold text-white truncate">Tepe Zhavarez</p>
                         <p class="text-xs text-slate-400">Super Admin</p>
@@ -110,7 +125,7 @@
                     <i class="ph ph-bell text-xl"></i>
                     <span class="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
                 </button>
-                <img src="https://ui-avatars.com/api/?name=Tepe+Zhavarez&background=4f46e5&color=fff" class="w-8 h-8 rounded-full md:hidden border border-slate-200">
+                <img src="https://ui-avatars.com/api/?name=Tepe+Zhavarez&background=025cca&color=fff" class="w-8 h-8 rounded-full md:hidden border border-slate-200">
             </div>
         </header>
 

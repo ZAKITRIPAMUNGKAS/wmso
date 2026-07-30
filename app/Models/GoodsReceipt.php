@@ -13,6 +13,10 @@ class GoodsReceipt extends Model
 
     protected $guarded = [];
 
+    protected $casts = [
+        'tanggal' => 'date',
+    ];
+
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);

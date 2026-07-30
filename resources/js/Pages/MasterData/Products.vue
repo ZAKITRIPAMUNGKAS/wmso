@@ -4,8 +4,8 @@ import ResponsiveTable from '@/Components/ResponsiveTable.vue';
 import Modal from '@/Components/Modal.vue';
 import InputError from '@/Components/InputError.vue';
 import { useForm, router, Head, Link } from '@inertiajs/vue3';
-import { ref, watch } from 'vue';
-import { PhNotePencil, PhTrash, PhTag, PhCube } from "@phosphor-icons/vue";
+import { ref, watch, computed } from 'vue';
+import { PhNotePencil, PhTrash, PhTag, PhCube, PhEye } from "@phosphor-icons/vue";
 
 const props = defineProps({
     products: {
@@ -16,7 +16,8 @@ const props = defineProps({
     filters: {
         type: Object,
         default: () => ({ search: '' })
-    }
+    },
+    next_code: String
 });
 
 const showModal = ref(false);
@@ -45,8 +46,7 @@ const openModal = (product = null) => {
         form.stok_minimum = product.stok_minimum;
     } else {
         form.reset();
-        // Auto-gen code example
-        form.kode_barang = 'PRD-' + Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+        form.kode_barang = '';
     }
     showModal.value = true;
 };
@@ -76,6 +76,29 @@ const closeModal = () => {
     form.reset();
     editingProduct.value = null;
 };
+
+const formatNumber = (num) => {
+    if (!num && num !== 0) return '';
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+};
+
+const parseNumber = (str) => {
+    return parseInt(str.replace(/\./g, '')) || 0;
+};
+
+const formattedHarga = computed({
+    get: () => formatNumber(form.harga),
+    set: (val) => {
+        form.harga = parseNumber(val);
+    }
+});
+
+const formattedStokMin = computed({
+    get: () => formatNumber(form.stok_minimum),
+    set: (val) => {
+        form.stok_minimum = parseNumber(val);
+    }
+});
 
 // Debounce implementation
 const debounce = (fn, delay) => {
@@ -113,7 +136,7 @@ watch(search, (newVal) => {
             title="Master Data" 
             active-tab="Produk" 
             :search="search"
-            add-button-label="Tambah Produk"
+            :add-button-label="$page.props.auth.user.role !== 'viewer' ? 'Tambah Produk' : null"
             @add="openModal()"
             @search="handleSearch"
         >
@@ -143,10 +166,13 @@ watch(search, (newVal) => {
                     </td>
                     <td class="px-8 py-5 text-right">
                         <div class="flex items-center justify-end gap-2">
-                            <button @click="openModal(item)" class="p-2.5 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all active:scale-90 uppercase">
+                            <Link :href="route('products.show', item.id)" class="p-2.5 text-slate-500 hover:bg-slate-50 hover:text-indigo-600 rounded-xl transition-all active:scale-90 uppercase">
+                                <PhEye :size="20" weight="bold" />
+                            </Link>
+                            <button v-if="$page.props.auth.user.role !== 'viewer'" @click="openModal(item)" class="p-2.5 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all active:scale-90 uppercase">
                                 <PhNotePencil :size="20" weight="bold" />
                             </button>
-                            <button @click="deleteProduct(item.id)" class="p-2.5 text-rose-500 hover:bg-rose-50 rounded-xl transition-all active:scale-90 uppercase">
+                            <button v-if="$page.props.auth.user.role !== 'viewer'" @click="deleteProduct(item.id)" class="p-2.5 text-rose-500 hover:bg-rose-50 rounded-xl transition-all active:scale-90 uppercase">
                                 <PhTrash :size="20" weight="bold" />
                             </button>
                         </div>
@@ -165,10 +191,13 @@ watch(search, (newVal) => {
                             </div>
                         </div>
                         <div class="flex gap-1 uppercase">
-                            <button @click="openModal(item)" class="p-2 text-slate-400 hover:text-indigo-600 transition-colors uppercase">
+                            <Link :href="route('products.show', item.id)" class="p-2 text-slate-400 hover:text-indigo-600 transition-colors uppercase">
+                                <PhEye :size="20" weight="bold" />
+                            </Link>
+                            <button v-if="$page.props.auth.user.role !== 'viewer'" @click="openModal(item)" class="p-2 text-slate-400 hover:text-indigo-600 transition-colors uppercase">
                                 <PhNotePencil :size="20" weight="bold" />
                             </button>
-                            <button @click="deleteProduct(item.id)" class="p-2 text-slate-400 hover:text-rose-500 transition-colors uppercase">
+                            <button v-if="$page.props.auth.user.role !== 'viewer'" @click="deleteProduct(item.id)" class="p-2 text-slate-400 hover:text-rose-500 transition-colors uppercase">
                                 <PhTrash :size="20" weight="bold" />
                             </button>
                         </div>
@@ -217,7 +246,7 @@ watch(search, (newVal) => {
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
                             <div class="col-span-1">
                                 <label class="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-widest ml-1 uppercase">Kode</label>
-                                <input type="text" v-model="form.kode_barang" disabled class="input-base !bg-slate-50 !border-slate-100 font-bold text-indigo-600 uppercase">
+                                <input type="text" v-model="form.kode_barang" class="input-base font-bold text-indigo-600 uppercase" :placeholder="editingProduct ? 'Kode barang...' : props.next_code + ' (Otomatis)'">
                                 <InputError :message="form.errors.kode_barang" />
                             </div>
                             <div class="col-span-1">
@@ -245,9 +274,14 @@ watch(search, (newVal) => {
                                 <label class="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-widest ml-1 uppercase">Harga</label>
                                 <div class="relative">
                                     <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">Rp</span>
-                                    <input type="number" v-model="form.harga" placeholder="0" class="input-base !pl-10 font-black uppercase">
+                                    <input type="text" v-model="formattedHarga" placeholder="0" class="input-base !pl-10 font-black uppercase">
                                 </div>
                                 <InputError :message="form.errors.harga" />
+                            </div>
+                            <div class="col-span-1">
+                                <label class="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-widest ml-1 uppercase">Stok Minimum</label>
+                                <input type="text" v-model="formattedStokMin" placeholder="0" class="input-base font-black uppercase">
+                                <InputError :message="form.errors.stok_minimum" />
                             </div>
                         </div>
                     </div>

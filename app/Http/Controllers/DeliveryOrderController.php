@@ -31,9 +31,23 @@ class DeliveryOrderController extends Controller
         $products = Product::all()->map(function ($product) {
             return [
                 'id' => $product->id,
+                'kode_barang' => $product->kode_barang,
                 'nama' => $product->nama,
                 'harga' => $product->harga,
-                'stocks' => $product->stocks()->get()->pluck('quantity', 'warehouse_id')
+                'stocks' => $product->stocks()->get()->pluck('quantity', 'warehouse_id'),
+                'rack_stocks' => $product->rackStocks()->with('rack')->get()->map(function ($rs) {
+                    return [
+                        'id' => $rs->id,
+                        'warehouse_id' => $rs->warehouse_id,
+                        'rack_id' => $rs->rack_id,
+                        'kode_rak' => $rs->rack ? $rs->rack->kode_rak : 'Tanpa Rak',
+                        'batch_number' => $rs->batch_number,
+                        'expired_at' => $rs->expired_at ? (\Carbon\Carbon::parse($rs->expired_at)->format('Y-m-d')) : null,
+                        'serial_number' => $rs->serial_number,
+                        'quantity' => $rs->quantity,
+                        'created_at' => $rs->created_at ? $rs->created_at->toIso8601String() : null
+                    ];
+                })
             ];
         });
 
@@ -41,6 +55,7 @@ class DeliveryOrderController extends Controller
             'customers' => Customer::all(),
             'warehouses' => Warehouse::all(),
             'products' => $products,
+            'racks' => \App\Models\Rack::all(),
         ]);
     }
 
@@ -57,11 +72,17 @@ class DeliveryOrderController extends Controller
             'total'            => 'required|numeric',
             'due_date'         => 'nullable|date',
             'keterangan'       => 'nullable|string',
+            'courier_name'     => 'nullable|string',
+            'tracking_number'  => 'nullable|string',
             'items'            => 'required|array',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity'   => 'required|integer|min:1',
             'items.*.harga'      => 'required|numeric',
             'items.*.subtotal'   => 'required|numeric',
+            'items.*.rack_id'    => 'nullable|exists:racks,id',
+            'items.*.batch_number' => 'nullable|string',
+            'items.*.expired_at'   => 'nullable|date',
+            'items.*.serial_number' => 'nullable|string',
         ]);
 
         try {
@@ -79,6 +100,15 @@ class DeliveryOrderController extends Controller
         return Inertia::render('BarangKeluar/Show', [
             'deliveryOrder' => $barang_keluar
         ]);
+    }
+
+    public function downloadPdf(DeliveryOrder $barang_keluar)
+    {
+        $barang_keluar->load(['items.product', 'customer', 'warehouse', 'user']);
+        
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.surat-jalan', ['deliveryOrder' => $barang_keluar]);
+        
+        return $pdf->download("surat-jalan-{$barang_keluar->no_sj}.pdf");
     }
 
     public function destroy(DeliveryOrder $barang_keluar)

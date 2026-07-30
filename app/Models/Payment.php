@@ -12,6 +12,10 @@ class Payment extends Model
 
     protected $guarded = [];
 
+    protected $casts = [
+        'tanggal' => 'date',
+    ];
+
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(Invoice::class);

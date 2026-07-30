@@ -13,6 +13,11 @@ class Invoice extends Model
 
     protected $guarded = [];
 
+    protected $casts = [
+        'tanggal' => 'date',
+        'due_date' => 'date',
+    ];
+
     public function deliveryOrder(): BelongsTo
     {
         return $this->belongsTo(DeliveryOrder::class);

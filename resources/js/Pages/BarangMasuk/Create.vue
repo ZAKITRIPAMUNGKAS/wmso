@@ -14,15 +14,17 @@ import {
     PhCalendar,
     PhWarehouse,
     PhReceipt,
-    PhShieldCheck
+    PhShieldCheck,
+    PhQrCode
 } from "@phosphor-icons/vue";
-import { computed, watch } from 'vue';
+import { computed, watch, ref } from 'vue';
 
 const props = defineProps({
     purchaseOrders: Array,
     suppliers: Array,
     warehouses: Array,
     products: Array,
+    racks: Array,
     // Shared Props
     auth: Object,
     errors: Object,
@@ -30,6 +32,15 @@ const props = defineProps({
     notifications: Array,
     flash: Object
 });
+
+const formatNumber = (num) => {
+    if (!num && num !== 0) return '';
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+};
+
+const parseNumber = (str) => {
+    return parseInt(str.replace(/\./g, '')) || 0;
+};
 
 const form = useForm({
     purchase_order_id: '',
@@ -58,8 +69,17 @@ const addItem = () => {
         product_id: '',
         quantity: 1,
         harga: 0,
-        subtotal: 0
+        subtotal: 0,
+        rack_id: '',
+        batch_number: '',
+        expired_at: '',
+        serial_number: ''
     });
+};
+
+const getWarehouseRacks = (warehouseId) => {
+    if (!warehouseId) return [];
+    return props.racks ? props.racks.filter(r => r.warehouse_id === warehouseId) : [];
 };
 
 const removeItem = (index) => {
@@ -69,6 +89,75 @@ const removeItem = (index) => {
 const updateSubtotal = (index) => {
     const item = form.items[index];
     item.subtotal = item.quantity * item.harga;
+};
+
+const onProductChange = (index) => {
+    const item = form.items[index];
+    if (!item.product_id || item.product_id === '') {
+        item.harga = 0;
+        item.subtotal = 0;
+        item.rack_id = '';
+        item.batch_number = '';
+        item.expired_at = '';
+        item.serial_number = '';
+        return;
+    }
+    const product = props.products.find(p => p.id === item.product_id);
+    if (product) {
+        item.harga = product.harga || 0;
+        updateSubtotal(index);
+    }
+};
+
+const barcodeQuery = ref('');
+const barcodeInput = ref(null);
+const scannerFeedback = ref(null);
+
+const handleBarcodeScan = () => {
+    const code = barcodeQuery.value.trim().toUpperCase();
+    if (!code) return;
+
+    const product = props.products.find(p => 
+        (p.kode_barang && p.kode_barang.toUpperCase() === code) || 
+        (p.barcode && p.barcode.toUpperCase() === code)
+    );
+
+    if (product) {
+        const existingIndex = form.items.findIndex(item => item.product_id === product.id);
+
+        if (existingIndex !== -1) {
+            form.items[existingIndex].quantity = (parseInt(form.items[existingIndex].quantity) || 0) + 1;
+            updateSubtotal(existingIndex);
+        } else {
+            form.items.push({
+                product_id: product.id,
+                quantity: 1,
+                harga: product.harga || 0,
+                subtotal: product.harga || 0,
+                rack_id: '',
+                batch_number: '',
+                expired_at: '',
+                serial_number: ''
+            });
+        }
+        showScannerFeedback(`✓ Produk ${product.nama} berhasil ditambahkan!`, 'success');
+    } else {
+        showScannerFeedback(`❌ Kode barang atau barcode ${code} tidak ditemukan!`, 'error');
+    }
+
+    barcodeQuery.value = '';
+    if (barcodeInput.value) {
+        barcodeInput.value.focus();
+    }
+};
+
+let feedbackTimeout = null;
+const showScannerFeedback = (message, type) => {
+    if (feedbackTimeout) clearTimeout(feedbackTimeout);
+    scannerFeedback.value = { message, type };
+    feedbackTimeout = setTimeout(() => {
+        scannerFeedback.value = null;
+    }, 3000);
 };
 
 const totalQuantity = computed(() => {
@@ -201,13 +290,34 @@ const submit = () => {
                         </button>
                     </div>
 
+                    <!-- Barcode Scanner Input -->
+                    <div class="mb-6 flex flex-col sm:flex-row gap-4 items-center">
+                        <div class="relative w-full">
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                                <PhQrCode :size="20" />
+                            </span>
+                            <input 
+                                type="text" 
+                                v-model="barcodeQuery" 
+                                @keydown.enter.prevent="handleBarcodeScan" 
+                                placeholder="Scan Barcode / QR Code..." 
+                                class="input-base !pl-12 font-black uppercase tracking-wider"
+                                ref="barcodeInput"
+                                autofocus
+                            >
+                        </div>
+                        <div v-if="scannerFeedback" :class="scannerFeedback.type === 'success' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-rose-50 text-rose-700 border-rose-100'" class="w-full sm:w-auto px-4 py-2.5 rounded-xl border text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all">
+                            {{ scannerFeedback.message }}
+                        </div>
+                    </div>
+
                     <!-- Mobile Cards -->
                     <div class="block md:hidden space-y-4">
                         <div v-for="(item, index) in form.items" :key="index" class="p-6 rounded-2xl border-2 border-slate-50 bg-white shadow-sm">
                             <div class="flex justify-between items-start mb-4">
                                 <div class="w-full">
                                     <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Produk #{{ index + 1 }}</label>
-                                    <select v-model="item.product_id" class="input-base !py-2 text-xs font-black">
+                                    <select v-model="item.product_id" @change="onProductChange(index)" class="input-base !py-2 text-xs font-black">
                                         <option value="">Pilih Produk...</option>
                                         <option v-for="p in products" :key="p.id" :value="p.id">{{ p.nama }}</option>
                                     </select>
@@ -223,7 +333,36 @@ const submit = () => {
                                 </div>
                                 <div>
                                     <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Harga Beli</label>
-                                    <input type="number" v-model="item.harga" @input="updateSubtotal(index)" class="input-base !py-2 text-xs font-black">
+                                    <input type="text" :value="formatNumber(item.harga)" @input="item.harga = parseNumber($event.target.value); updateSubtotal(index)" class="input-base !py-2 text-xs font-black">
+                                </div>
+                            </div>
+                            <!-- Detail Fields Mobile -->
+                            <div v-if="item.product_id && item.product_id !== ''" class="mt-4 border-t-2 border-dashed border-indigo-50 pt-4">
+                                <div class="flex items-center gap-1.5 mb-3">
+                                    <div class="h-1.5 w-1.5 rounded-full bg-indigo-500"></div>
+                                    <span class="text-[9px] font-black text-indigo-500 uppercase tracking-widest">Detail Penyimpanan</span>
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Rak Penyimpanan</label>
+                                        <select v-model="item.rack_id" class="input-base !py-2 text-xs font-black">
+                                            <option value="">Pilih Rak...</option>
+                                            <option v-for="r in getWarehouseRacks(form.warehouse_id)" :key="r.id" :value="r.id">{{ r.kode_rak }} - {{ r.nama }}</option>
+                                        </select>
+                                        <p v-if="!form.warehouse_id" class="text-[9px] text-rose-500 font-bold mt-1">Pilih gudang dulu</p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">No. Batch</label>
+                                        <input type="text" v-model="item.batch_number" placeholder="Contoh: BATCH-001" class="input-base !py-2 text-xs font-black">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Tgl. Kedaluwarsa</label>
+                                        <input type="date" v-model="item.expired_at" class="input-base !py-2 text-xs font-black">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">No. Serial</label>
+                                        <input type="text" v-model="item.serial_number" placeholder="Contoh: SN-12345" class="input-base !py-2 text-xs font-black">
+                                    </div>
                                 </div>
                             </div>
                             <div class="flex justify-between items-center pt-4 border-t border-slate-100">
@@ -249,29 +388,66 @@ const submit = () => {
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-50">
-                                <tr v-for="(item, index) in form.items" :key="index" class="hover:bg-slate-50/50 group transition-all">
-                                    <td class="py-4 pr-4">
-                                        <select v-model="form.items[index].product_id" class="input-base !py-2 text-xs font-black" :class="{'border-rose-500': form.errors[`items.${index}.product_id`]}">
-                                            <option value="">Pilih Produk...</option>
-                                            <option v-for="p in products" :key="p.id" :value="p.id">{{ p.nama }}</option>
-                                        </select>
-                                        <div v-if="form.errors[`items.${index}.product_id`]" class="text-[9px] text-rose-500 font-bold mt-1 uppercase">{{ form.errors[`items.${index}.product_id`] }}</div>
-                                    </td>
-                                    <td class="py-4 pr-4">
-                                        <input type="number" v-model="form.items[index].quantity" @input="updateSubtotal(index)" class="input-base !py-2 text-xs font-black text-center" :class="{'border-rose-500': form.errors[`items.${index}.quantity`]}">
-                                        <div v-if="form.errors[`items.${index}.quantity`]" class="text-[9px] text-rose-500 font-bold mt-1 uppercase text-center">{{ form.errors[`items.${index}.quantity`] }}</div>
-                                    </td>
-                                    <td class="py-4 pr-4 text-right">
-                                        <div class="relative">
-                                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400">Rp</span>
-                                            <input type="number" v-model="item.harga" @input="updateSubtotal(index)" class="input-base !py-2 !pl-8 text-xs font-black text-right">
-                                        </div>
-                                    </td>
-                                    <td class="py-4 pr-4 font-black text-slate-900 text-sm text-right">Rp {{ item.subtotal.toLocaleString('id-ID') }}</td>
-                                    <td class="py-4 text-center">
-                                        <button @click="removeItem(index)" class="text-slate-300 hover:text-rose-500 transition-all active:scale-90"><PhTrash :size="18" weight="bold" /></button>
-                                    </td>
-                                </tr>
+                                <template v-for="(item, index) in form.items" :key="index">
+                                    <!-- Main Product Row -->
+                                    <tr class="hover:bg-slate-50/30 transition-all">
+                                        <td class="py-4 pr-4 align-top">
+                                            <select v-model="form.items[index].product_id" @change="onProductChange(index)" class="input-base !py-2 text-xs font-black" :class="{'border-rose-500': form.errors[`items.${index}.product_id`]}">
+                                                <option value="">Pilih Produk...</option>
+                                                <option v-for="p in products" :key="p.id" :value="p.id">{{ p.nama }}</option>
+                                            </select>
+                                            <div v-if="form.errors[`items.${index}.product_id`]" class="text-[9px] text-rose-500 font-bold mt-1 uppercase">{{ form.errors[`items.${index}.product_id`] }}</div>
+                                        </td>
+                                        <td class="py-4 pr-4 align-top w-24">
+                                            <input type="number" v-model="form.items[index].quantity" @input="updateSubtotal(index)" class="input-base !py-2 text-xs font-black text-center" :class="{'border-rose-500': form.errors[`items.${index}.quantity`]}">
+                                            <div v-if="form.errors[`items.${index}.quantity`]" class="text-[9px] text-rose-500 font-bold mt-1 uppercase text-center">{{ form.errors[`items.${index}.quantity`] }}</div>
+                                        </td>
+                                        <td class="py-4 pr-4 text-right align-top w-40">
+                                            <div class="relative">
+                                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400">Rp</span>
+                                                <input type="text" :value="formatNumber(item.harga)" @input="item.harga = parseNumber($event.target.value); updateSubtotal(index)" class="input-base !py-2 !pl-8 text-xs font-black text-right">
+                                            </div>
+                                        </td>
+                                        <td class="py-4 pr-4 font-black text-slate-900 text-sm text-right align-top w-40 pt-6">Rp {{ item.subtotal.toLocaleString('id-ID') }}</td>
+                                        <td class="py-4 text-center align-top w-12 pt-5">
+                                            <button @click="removeItem(index)" class="text-slate-300 hover:text-rose-500 transition-all active:scale-90"><PhTrash :size="18" weight="bold" /></button>
+                                        </td>
+                                    </tr>
+                                    <!-- Detailed Storage Row (Visible only when product selected) -->
+                                    <tr v-if="form.items[index].product_id && form.items[index].product_id !== ''" class="">
+                                        <td colspan="5" class="px-1 pb-4">
+                                            <div class="bg-indigo-50/60 rounded-2xl border border-indigo-100/80 px-5 py-4">
+                                                <div class="flex items-center gap-2 mb-4">
+                                                    <div class="h-2 w-2 rounded-full bg-indigo-500"></div>
+                                                    <span class="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Detail Penyimpanan</span>
+                                                    <span class="text-[10px] font-bold text-slate-400 truncate ml-1">({{ products.find(p => p.id === item.product_id)?.nama }})</span>
+                                                </div>
+                                                <div class="grid grid-cols-4 gap-4">
+                                                    <div class="space-y-1.5">
+                                                        <label class="block text-[9px] font-black text-slate-500 uppercase tracking-widest">Rak Penyimpanan</label>
+                                                        <select v-model="form.items[index].rack_id" class="w-full bg-white border border-indigo-100 text-slate-800 rounded-xl h-10 px-3 pr-8 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all">
+                                                            <option value="">Pilih Rak...</option>
+                                                            <option v-for="r in getWarehouseRacks(form.warehouse_id)" :key="r.id" :value="r.id">{{ r.kode_rak }} - {{ r.nama }}</option>
+                                                        </select>
+                                                        <p v-if="!form.warehouse_id" class="text-[9px] text-rose-500 font-bold">Pilih gudang dulu</p>
+                                                    </div>
+                                                    <div class="space-y-1.5">
+                                                        <label class="block text-[9px] font-black text-slate-500 uppercase tracking-widest">No. Batch</label>
+                                                        <input type="text" v-model="form.items[index].batch_number" placeholder="Contoh: BATCH-001" class="w-full bg-white border border-indigo-100 text-slate-800 rounded-xl h-10 px-3 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all placeholder:text-slate-300">
+                                                    </div>
+                                                    <div class="space-y-1.5">
+                                                        <label class="block text-[9px] font-black text-slate-500 uppercase tracking-widest">Tgl. Kedaluwarsa</label>
+                                                        <input type="date" v-model="form.items[index].expired_at" class="w-full bg-white border border-indigo-100 text-slate-800 rounded-xl h-10 px-3 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all">
+                                                    </div>
+                                                    <div class="space-y-1.5">
+                                                        <label class="block text-[9px] font-black text-slate-500 uppercase tracking-widest">No. Serial <span class="normal-case font-normal text-slate-300">(opsional)</span></label>
+                                                        <input type="text" v-model="form.items[index].serial_number" placeholder="Contoh: SN-12345" class="w-full bg-white border border-indigo-100 text-slate-800 rounded-xl h-10 px-3 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all placeholder:text-slate-300">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </template>
                             </tbody>
                         </table>
                         <button @click="addItem" class="w-full mt-6 py-4 border-2 border-dashed border-indigo-50 text-indigo-400 font-black text-xs uppercase tracking-[0.2em] rounded-2xl hover:border-indigo-100 hover:text-indigo-600 transition flex items-center justify-center gap-2">

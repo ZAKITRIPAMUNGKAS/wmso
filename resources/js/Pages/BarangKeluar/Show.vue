@@ -2,7 +2,8 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
-import { PhArrowLeft, PhPrinter } from "@phosphor-icons/vue";
+import { PhArrowLeft, PhPrinter, PhGear, PhX, PhPlus, PhTrash } from "@phosphor-icons/vue";
+import { ref, reactive } from 'vue';
 
 const props = defineProps({
     deliveryOrder: Object,
@@ -35,6 +36,18 @@ const currentTime = new Date().toLocaleString('id-ID', {
     day: '2-digit', month: '2-digit', year: 'numeric', 
     hour: '2-digit', minute: '2-digit' 
 }).replace(',', '');
+
+const showCustomizer = ref(false);
+
+const settings = reactive({
+    docNumber: getOfficialNumber.value,
+    docDate: formatDate(props.deliveryOrder.tanggal),
+    customerName: props.deliveryOrder.customer.nama.toUpperCase(),
+    receiverSignatory: '', // Diterima Oleh
+    courierSignatory: '', // Sopir / Kurir
+    adminSignatory: props.deliveryOrder.user.name.toUpperCase(), // Hormat Kami
+    keterangan: props.deliveryOrder.keterangan || 'Barang telah diperiksa dan diserahkan dalam kondisi baik. Harap periksa kembali kesesuaian barang saat diterima.'
+});
 </script>
 
 <template>
@@ -46,10 +59,93 @@ const currentTime = new Date().toLocaleString('id-ID', {
             <Link :href="route('barang-keluar.index')" class="text-[11px] font-bold text-slate-500 hover:text-[#1E3A5F] flex items-center gap-2 uppercase tracking-wider transition">
                 <PhArrowLeft weight="bold" /> Kembali ke Index
             </Link>
-            <button @click="printPage" class="bg-[#1E3A5F] text-white px-6 py-2 text-[11px] font-bold uppercase tracking-widest hover:bg-[#162a45] transition shadow-sm active:scale-95">
-                <PhPrinter weight="fill" class="inline mr-2" /> Cetak Surat Jalan
-            </button>
+            <div class="flex items-center gap-3">
+                <button @click="showCustomizer = true" class="bg-white border border-slate-200 text-slate-700 px-5 py-2 text-[11px] font-bold uppercase tracking-widest hover:border-indigo-600 transition shadow-sm active:scale-95">
+                    <PhGear weight="bold" class="inline mr-2" /> Kustomisasi
+                </button>
+                <a :href="route('barang-keluar.pdf', deliveryOrder.id)" target="_blank" class="bg-emerald-600 text-white px-5 py-2 text-[11px] font-bold uppercase tracking-widest hover:bg-emerald-700 transition shadow-sm active:scale-95 inline-flex items-center gap-2">
+                    <PhPrinter weight="bold" /> Download PDF
+                </a>
+                <button @click="printPage" class="bg-[#1E3A5F] text-white px-5 py-2 text-[11px] font-bold uppercase tracking-widest hover:bg-[#162a45] transition shadow-sm active:scale-95">
+                    <PhPrinter weight="fill" class="inline mr-2" /> Cetak Langsung
+                </button>
+            </div>
         </div>
+
+        <!-- CUSTOMIZATION SIDEBAR -->
+        <Transition
+            enter-active-class="transition duration-500 ease-out"
+            enter-from-class="opacity-0 translate-x-full"
+            enter-to-class="opacity-100 translate-x-0"
+            leave-active-class="transition duration-500 ease-in"
+            leave-from-class="opacity-100 translate-x-0"
+            leave-to-class="opacity-0 translate-x-full"
+        >
+            <div v-if="showCustomizer" class="fixed inset-y-0 right-0 w-80 bg-white shadow-[-20px_0_60px_rgba(0,0,0,0.1)] z-[100] no-print flex flex-col border-l border-slate-100">
+                <div class="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <div>
+                        <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest">Kustomisasi SJ</h3>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase">Edit tampilan dokumen</p>
+                    </div>
+                    <button @click="showCustomizer = false" class="p-2 hover:bg-white rounded-lg text-slate-400 hover:text-rose-500 transition shadow-sm">
+                        <PhX :size="20" weight="bold" />
+                    </button>
+                </div>
+                
+                <div class="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-hide">
+                    <!-- General Settings -->
+                    <div class="space-y-4">
+                        <p class="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Informasi Dokumen</p>
+                        
+                        <div class="space-y-1.5">
+                            <label class="text-[9px] font-black text-slate-400 uppercase">Nomor Surat Jalan</label>
+                            <input v-model="settings.docNumber" type="text" class="w-full bg-slate-50 border-none rounded-lg text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-600/20">
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <label class="text-[9px] font-black text-slate-400 uppercase">Tanggal</label>
+                            <input v-model="settings.docDate" type="text" class="w-full bg-slate-50 border-none rounded-lg text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-600/20">
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <label class="text-[9px] font-black text-slate-400 uppercase">Nama Customer (Header)</label>
+                            <input v-model="settings.customerName" type="text" class="w-full bg-slate-50 border-none rounded-lg text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-600/20">
+                        </div>
+                    </div>
+
+                    <!-- Signatory Settings -->
+                    <div class="space-y-4 pt-4 border-t border-slate-100">
+                        <p class="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Penanda Tangan</p>
+                        <div class="space-y-3">
+                            <div class="space-y-1.5">
+                                <label class="text-[9px] font-black text-slate-400 uppercase">Penerima (Bawah Kiri)</label>
+                                <input v-model="settings.receiverSignatory" type="text" placeholder="Nama Terang & Stempel" class="w-full bg-slate-50 border-none rounded-lg text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-600/20">
+                            </div>
+                            <div class="space-y-1.5">
+                                <label class="text-[9px] font-black text-slate-400 uppercase">Sopir (Bawah Tengah)</label>
+                                <input v-model="settings.courierSignatory" type="text" placeholder="Nama Sopir" class="w-full bg-slate-50 border-none rounded-lg text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-600/20">
+                            </div>
+                            <div class="space-y-1.5">
+                                <label class="text-[9px] font-black text-slate-400 uppercase">Hormat Kami (Bawah Kanan)</label>
+                                <input v-model="settings.adminSignatory" type="text" class="w-full bg-slate-50 border-none rounded-lg text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-600/20">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Keterangan -->
+                    <div class="space-y-4 pt-4 border-t border-slate-100">
+                        <p class="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Keterangan</p>
+                        <textarea v-model="settings.keterangan" rows="4" class="w-full bg-slate-50 border-none rounded-lg text-[10px] font-bold text-slate-600 focus:ring-2 focus:ring-indigo-600/20 resize-none"></textarea>
+                    </div>
+                </div>
+
+                <div class="p-6 border-t border-slate-100 bg-slate-50/50">
+                    <button @click="showCustomizer = false" class="w-full bg-[#1E3A5F] text-white py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-blue-900/10 active:scale-95 transition">
+                        Simpan Perubahan
+                    </button>
+                </div>
+            </div>
+        </Transition>
 
         <!-- OFFICIAL CORPORATE DOCUMENT CONTAINER -->
         <div class="print-container bg-white border border-[#D1D5DB] shadow-sm relative font-business text-[#1F2937] leading-tight mx-auto overflow-hidden">
@@ -87,7 +183,7 @@ const currentTime = new Date().toLocaleString('id-ID', {
                             SURAT JALAN
                         </h2>
                         <p class="text-[10px] font-sans font-bold tracking-tight text-[#4B5563]">
-                            No: {{ getOfficialNumber }}
+                            No: {{ settings.docNumber }}
                         </p>
                     </div>
                 </div>
@@ -97,13 +193,13 @@ const currentTime = new Date().toLocaleString('id-ID', {
                 <!-- 2. PERIHAL & INFO CUSTOMER -->
                 <div class="mb-6 flex justify-between items-start text-[10px]">
                     <div class="space-y-1">
-                        <p><span class="font-black w-24 inline-block">KEPADA YTH.</span> : {{ deliveryOrder.customer.nama.toUpperCase() }}</p>
+                        <p><span class="font-black w-24 inline-block">KEPADA YTH.</span> : {{ settings.customerName }}</p>
                         <p><span class="font-black w-24 inline-block">ALAMAT</span> : {{ deliveryOrder.customer.alamat.toUpperCase() }}</p>
                         <p><span class="font-black w-24 inline-block">PO NUMBER</span> : {{ deliveryOrder.po_number || '-' }}</p>
                         <p><span class="font-black w-24 inline-block">PERIHAL</span> : Pengiriman Barang (DO)</p>
                     </div>
                     <div class="text-right space-y-1">
-                        <p><span class="font-black italic tracking-tighter">Jakarta,</span> {{ formatDate(deliveryOrder.tanggal) }}</p>
+                        <p><span class="font-black italic tracking-tighter">Jakarta,</span> {{ settings.docDate }}</p>
                         <div class="inline-block border-2 border-double border-[#1E3A5F] px-3 py-1 mt-2">
                             <span class="text-[10px] font-serif font-black text-[#1E3A5F] uppercase tracking-[0.2em]">{{ deliveryOrder.status.toUpperCase() }}</span>
                         </div>
@@ -151,7 +247,7 @@ const currentTime = new Date().toLocaleString('id-ID', {
                         <div class="border border-[#D1D5DB] p-4 min-h-[60px] relative">
                             <p class="absolute -top-2 left-3 bg-white px-2 text-[9px] font-black uppercase tracking-widest text-[#4B5563]">Keterangan Pengiriman</p>
                             <p class="text-[10px] leading-relaxed italic text-slate-600">
-                                {{ deliveryOrder.keterangan || 'Barang telah diperiksa dan diserahkan dalam kondisi baik. Harap periksa kembali kesesuaian barang saat diterima.' }}
+                                {{ settings.keterangan }}
                             </p>
                         </div>
                     </div>
@@ -162,16 +258,13 @@ const currentTime = new Date().toLocaleString('id-ID', {
                     <div class="text-center w-[160px]">
                         <p class="text-[10px] font-black mb-16 uppercase italic">Diterima Oleh,</p>
                         <div class="border-b-[1.5px] border-[#1F2937] w-full"></div>
-                        <p class="text-[8px] font-sans font-bold text-slate-400 uppercase mt-1">( Tanda Tangan & Stempel )</p>
+                        <p class="text-[10px] font-black uppercase mt-1 italic tracking-widest">{{ settings.receiverSignatory || '( Tanda Tangan & Stempel )' }}</p>
                     </div>
                     
                     <div class="text-center w-[200px]">
                         <p class="text-[10px] font-black mb-16 uppercase">Sopir / Kurir,</p>
                         <div class="border-b-[1.5px] border-[#1F2937] w-full"></div>
-                        <div class="mt-2 text-[8px] font-sans font-bold text-left space-y-1 text-slate-400 uppercase tracking-tighter">
-                            <p>No. Pol : ________________</p>
-                            <p>Jam : ________________</p>
-                        </div>
+                        <p class="text-[10px] font-black uppercase mt-1 italic tracking-widest">{{ settings.courierSignatory || '________________' }}</p>
                     </div>
 
                     <div class="text-center w-[180px] relative">
@@ -183,7 +276,7 @@ const currentTime = new Date().toLocaleString('id-ID', {
                         </div>
 
                         <div class="border-b-[1.5px] border-[#1F2937] w-full"></div>
-                        <p class="text-[10px] font-black uppercase mt-1">{{ deliveryOrder.user.name.toUpperCase() }}</p>
+                        <p class="text-[10px] font-black uppercase mt-1 italic tracking-widest">{{ settings.adminSignatory }}</p>
                         <p class="text-[8px] font-sans font-bold text-slate-400 uppercase tracking-widest">WAREHOUSE DEPT.</p>
                     </div>
                 </div>
@@ -195,7 +288,7 @@ const currentTime = new Date().toLocaleString('id-ID', {
                     "Barang yang sudah dibeli tidak dapat ditukar atau dikembalikan tanpa perjanjian terlebih dahulu. Surat Jalan ini merupakan dokumen resmi CV. Listrindo Jaya Elektrik."
                 </p>
                 <div class="flex justify-between items-center text-[8px] font-sans font-black text-[#9CA3AF] uppercase tracking-widest border-t border-slate-200 pt-2 px-4">
-                    <span>SJ-ID: {{ getOfficialNumber }}</span>
+                    <span>SJ-ID: {{ settings.docNumber }}</span>
                     <span>HALAMAN 1 DARI 1</span>
                     <span>PRINTED: {{ currentTime }}</span>
                 </div>

@@ -31,7 +31,9 @@ class DeliveryOrderService
                 'total' => $data['total'],
                 'status' => 'sent',
                 'keterangan' => $data['keterangan'] ?? null,
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
+                'courier_name' => $data['courier_name'] ?? null,
+                'tracking_number' => $data['tracking_number'] ?? null,
             ]);
 
             // 2. Add Items and Deduct Stock
@@ -41,7 +43,11 @@ class DeliveryOrderService
                     'product_id' => $item['product_id'],
                     'quantity' => $item['quantity'],
                     'harga' => $item['harga'],
-                    'subtotal' => $item['subtotal']
+                    'subtotal' => $item['subtotal'],
+                    'rack_id' => $item['rack_id'] ?? null,
+                    'batch_number' => $item['batch_number'] ?? null,
+                    'expired_at' => $item['expired_at'] ?? null,
+                    'serial_number' => $item['serial_number'] ?? null,
                 ]);
 
                 $this->stockService->adjustStock(
@@ -51,7 +57,13 @@ class DeliveryOrderService
                     'out',
                     'delivery_order',
                     $do->id,
-                    Auth::id()
+                    Auth::id(),
+                    [
+                        'rack_id' => $item['rack_id'] ?? null,
+                        'batch_number' => $item['batch_number'] ?? null,
+                        'expired_at' => $item['expired_at'] ?? null,
+                        'serial_number' => $item['serial_number'] ?? null,
+                    ]
                 );
             }
 

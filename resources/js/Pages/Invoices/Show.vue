@@ -1,5 +1,6 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
+import { computed, reactive, ref, onMounted } from 'vue';
 import { 
     PhPrinter, 
     PhArrowLeft, 
@@ -7,9 +8,13 @@ import {
     PhSealCheck,
     PhWarning,
     PhCircleWavyCheck,
-    PhCircleWavyWarning
+    PhCircleWavyWarning,
+    PhGear,
+    PhPlus,
+    PhTrash,
+    PhCaretRight,
+    PhX
 } from "@phosphor-icons/vue";
-import { computed } from 'vue';
 
 const props = defineProps({
     invoice: {
@@ -66,9 +71,35 @@ const terbilang = (angka) => {
     return konversi(num).trim().replace(/\s+/g, ' ') + " Rupiah";
 };
 
+const showCustomizer = ref(false);
+
+const settings = reactive({
+    invoiceNumber: getOfficialNumber(props.invoice),
+    invoiceDate: formatDateRapi(props.invoice?.tanggal),
+    receiverName: '',
+    signatoryName: 'Administrator WMS',
+    showNpwp: true,
+    ppnPercent: 11,
+    footerLine1: 'Mohon konfirmasi bukti transfer via WhatsApp: 0812-2507-9988.',
+    footerLine2: '"Pembayaran sah apabila sudah diterima di rekening perusahaan kami."',
+    banks: [
+        { name: 'Bank BCA', number: '1234-5678-90', holder: 'A/N CV. Listrindo Jaya Elektrik', logo: '/images/banks/bca.png' },
+        { name: 'Bank Mandiri', number: '0987-6543-21', holder: 'A/N CV. Listrindo Jaya Elektrik', logo: '/images/banks/mandiri.png' }
+    ]
+});
+
+const addBank = () => {
+    settings.banks.push({ name: 'Bank Baru', number: '0000-0000-00', holder: 'A/N Nama Rekening', logo: '' });
+};
+
+const removeBank = (index) => {
+    settings.banks.splice(index, 1);
+};
+
 const grandTotal = computed(() => {
     const subtotal = Number(props.invoice?.total || 0);
-    return subtotal * 1.11; // Include PPN 11%
+    const taxFactor = 1 + (settings.ppnPercent / 100);
+    return subtotal * taxFactor;
 });
 
 const terbilangGrandTotal = computed(() => {
@@ -119,10 +150,127 @@ const print = () => window.print();
                     <p class="text-[10px] text-slate-800 font-black uppercase">{{ getOfficialNumber(invoice) }}</p>
                 </div>
             </div>
-            <button @click="print" class="flex items-center gap-2 bg-[#1E3A5F] text-white px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-blue-900/20 active:scale-95 transition">
-                <PhPrinter weight="bold" /> Cetak Dokumen
-            </button>
+            <div class="flex items-center gap-3">
+                <button v-if="$page.props.auth.user.role !== 'viewer'" @click="showCustomizer = true" class="flex items-center gap-2 bg-white border border-slate-200 text-slate-700 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm hover:border-indigo-600 hover:text-indigo-600 transition">
+                    <PhGear weight="bold" :size="16" /> Kustomisasi
+                </button>
+                <button @click="print" class="flex items-center gap-2 bg-[#1E3A5F] text-white px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-blue-900/20 active:scale-95 transition">
+                    <PhPrinter weight="bold" /> Cetak Dokumen
+                </button>
+            </div>
         </div>
+
+        <!-- CUSTOMIZATION SIDEBAR -->
+        <Transition
+            enter-active-class="transition duration-500 ease-out"
+            enter-from-class="opacity-0 translate-x-full"
+            enter-to-class="opacity-100 translate-x-0"
+            leave-active-class="transition duration-500 ease-in"
+            leave-from-class="opacity-100 translate-x-0"
+            leave-to-class="opacity-0 translate-x-full"
+        >
+            <div v-if="showCustomizer" class="fixed inset-y-0 right-0 w-80 bg-white shadow-[-20px_0_60px_rgba(0,0,0,0.1)] z-[100] no-print flex flex-col border-l border-slate-100">
+                <div class="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <div>
+                        <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest">Kustomisasi</h3>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase">Edit tampilan dokumen</p>
+                    </div>
+                    <button @click="showCustomizer = false" class="p-2 hover:bg-white rounded-lg text-slate-400 hover:text-rose-500 transition shadow-sm">
+                        <PhX :size="20" weight="bold" />
+                    </button>
+                </div>
+                
+                <div class="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-hide">
+                    <!-- General Settings -->
+                    <div class="space-y-4">
+                        <p class="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Informasi Umum</p>
+                        
+                        <div class="space-y-1.5">
+                            <label class="text-[9px] font-black text-slate-400 uppercase">Nomor Invoice</label>
+                            <input v-model="settings.invoiceNumber" type="text" class="w-full bg-slate-50 border-none rounded-lg text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-600/20">
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <label class="text-[9px] font-black text-slate-400 uppercase">Tanggal Invoice</label>
+                            <input v-model="settings.invoiceDate" type="text" class="w-full bg-slate-50 border-none rounded-lg text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-600/20">
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <label class="text-[9px] font-black text-slate-400 uppercase">Nama Penerima (Tanda Tangan)</label>
+                            <input v-model="settings.receiverName" type="text" placeholder="Nama Terang & Stempel" class="w-full bg-slate-50 border-none rounded-lg text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-600/20">
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <label class="text-[9px] font-black text-slate-400 uppercase">Nama Pengirim (Tanda Tangan)</label>
+                            <input v-model="settings.signatoryName" type="text" class="w-full bg-slate-50 border-none rounded-lg text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-600/20">
+                        </div>
+
+                        <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+                            <span class="text-[9px] font-black text-slate-600 uppercase">Tampilkan NPWP</span>
+                            <button @click="settings.showNpwp = !settings.showNpwp" 
+                                    :class="[settings.showNpwp ? 'bg-indigo-600' : 'bg-slate-300']"
+                                    class="w-10 h-5 rounded-full relative transition-colors duration-300">
+                                <div :class="[settings.showNpwp ? 'translate-x-5' : 'translate-x-1']" 
+                                     class="absolute top-1 w-3 h-3 bg-white rounded-full transition-transform duration-300"></div>
+                            </button>
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <label class="text-[9px] font-black text-slate-400 uppercase">PPN (%)</label>
+                            <div class="relative">
+                                <input v-model.number="settings.ppnPercent" type="number" class="w-full bg-slate-50 border-none rounded-lg text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-600/20 pr-8">
+                                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400">%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Footer Settings -->
+                    <div class="space-y-4 pt-4 border-t border-slate-100">
+                        <p class="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Keterangan Bawah</p>
+                        <div class="space-y-3">
+                            <div class="space-y-1.5">
+                                <label class="text-[9px] font-black text-slate-400 uppercase">Baris 1 (WA/Konfirmasi)</label>
+                                <textarea v-model="settings.footerLine1" rows="2" class="w-full bg-slate-50 border-none rounded-lg text-[10px] font-bold text-slate-600 focus:ring-2 focus:ring-indigo-600/20 resize-none"></textarea>
+                            </div>
+                            <div class="space-y-1.5">
+                                <label class="text-[9px] font-black text-slate-400 uppercase">Baris 2 (Disclaimer)</label>
+                                <textarea v-model="settings.footerLine2" rows="2" class="w-full bg-slate-50 border-none rounded-lg text-[10px] font-bold text-slate-600 focus:ring-2 focus:ring-indigo-600/20 resize-none"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bank Settings -->
+                    <div class="space-y-4 pt-4 border-t border-slate-100">
+                        <div class="flex items-center justify-between">
+                            <p class="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Informasi Bank</p>
+                            <button @click="addBank" class="p-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+                                <PhPlus :size="14" weight="bold" />
+                            </button>
+                        </div>
+                        
+                        <div v-for="(bank, index) in settings.banks" :key="index" class="p-4 bg-slate-50 rounded-2xl space-y-3 relative group/bank">
+                            <button @click="removeBank(index)" class="absolute -top-2 -right-2 w-6 h-6 bg-rose-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover/bank:opacity-100 transition shadow-lg">
+                                <PhTrash :size="12" weight="bold" />
+                            </button>
+                            <div class="space-y-1.5">
+                                <label class="text-[8px] font-black text-slate-400 uppercase">Nama Bank & Nomor Rekening</label>
+                                <input v-model="bank.number" type="text" placeholder="Bank BCA: 1234-5678-90" class="w-full bg-white border-none rounded-lg text-[10px] font-bold text-slate-700 focus:ring-2 focus:ring-indigo-600/20">
+                            </div>
+                            <div class="space-y-1.5">
+                                <label class="text-[8px] font-black text-slate-400 uppercase">Atas Nama</label>
+                                <input v-model="bank.holder" type="text" placeholder="A/N CV. Listrindo Jaya Elektrik" class="w-full bg-white border-none rounded-lg text-[10px] font-bold text-slate-700 focus:ring-2 focus:ring-indigo-600/20">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-6 border-t border-slate-100 bg-slate-50/50">
+                    <button @click="showCustomizer = false" class="w-full bg-[#1E3A5F] text-white py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-blue-900/10 active:scale-95 transition">
+                        Simpan Perubahan
+                    </button>
+                </div>
+            </div>
+        </Transition>
 
         <!-- 3 & 5. THE DOCUMENT (A4 CONSTRAINTS & SOFT WATERMARK) -->
         <div class="invoice-container bg-white mx-auto relative overflow-hidden print:shadow-none shadow-2xl border border-slate-200 print:border-none">
@@ -137,7 +285,7 @@ const print = () => window.print();
 
             <div class="relative z-10 flex flex-col h-full min-h-[267mm]">
                 <!-- KOP SURAT -->
-                <div class="flex justify-between items-start border-b-[3px] border-[#1E3A5F] pb-6 mb-8">
+                <div class="flex justify-between items-start border-b-[3px] border-[#1E3A5F] pb-4 mb-4">
                     <div class="flex gap-5">
                         <div v-if="company?.logo" class="w-16 h-16 bg-white border border-slate-100 flex items-center justify-center p-1 shadow-sm">
                             <img :src="'/storage/' + company.logo" class="w-full h-full object-contain" alt="Logo">
@@ -148,12 +296,12 @@ const print = () => window.print();
                             <p class="text-[10px] font-medium text-slate-500 leading-relaxed">
                                 Jl. Tebet Raya No. 11G, Tebet Barat, Jakarta Selatan 12810<br>
                                 Telp: {{ company?.phone_primary || '-' }} | Email: {{ company?.email || 'info@listrindojaya.co.id' }}<br>
-                                NPWP: 01.234.567.8-901.000
+                                <span v-if="settings.showNpwp">NPWP: 01.234.567.8-901.000</span>
                             </p>
                         </div>
                     </div>
                     <div class="text-right flex flex-col items-end gap-2">
-                        <p class="text-[11px] font-bold text-slate-800">Jakarta, {{ formatDateRapi(invoice?.tanggal) }}</p>
+                        <p class="text-[11px] font-bold text-slate-800">Jakarta, {{ settings.invoiceDate }}</p>
                         <!-- 8. STATUS BADGE SMALL -->
                         <div :class="['flex items-center gap-1.5 px-3 py-1.5 border-2 rounded-lg text-[10px] font-black tracking-widest uppercase', statusConfig.class]">
                             <component :is="statusConfig.icon" :size="14" weight="bold" />
@@ -163,10 +311,10 @@ const print = () => window.print();
                 </div>
 
                 <!-- DOCUMENT TITLE -->
-                <h2 class="text-2xl font-serif font-black text-[#1E3A5F] uppercase text-center tracking-[0.4em] mb-8 border-b border-slate-50 pb-4">INVOICE</h2>
+                <h2 class="text-2xl font-serif font-black text-[#1E3A5F] uppercase text-center tracking-[0.4em] mb-6 border-b border-slate-50 pb-4">INVOICE</h2>
 
                 <!-- 2. HEADER INFO SYMMETRICAL (4x4 Rows) -->
-                <div class="grid grid-cols-2 gap-12 mb-8 text-[11px]">
+                <div class="grid grid-cols-2 gap-12 mb-6 text-[11px]">
                     <div class="space-y-1.5">
                         <p class="flex"><span class="font-black min-w-[120px] text-slate-400">KEPADA YTH.</span> <span class="mr-2">:</span> <span class="font-black text-slate-800 uppercase">{{ invoice?.delivery_order?.customer?.nama || '-' }}</span></p>
                         <p class="flex"><span class="font-black min-w-[120px] text-slate-400">ALAMAT</span> <span class="mr-2">:</span> <span class="font-bold text-slate-600 leading-tight">{{ invoice?.delivery_order?.customer?.alamat || '-' }}</span></p>
@@ -174,7 +322,7 @@ const print = () => window.print();
                         <p class="flex"><span class="font-black min-w-[120px] text-slate-400">PERIHAL</span> <span class="mr-2">:</span> <span class="font-bold text-slate-600">Penagihan Pembayaran (Invoice)</span></p>
                     </div>
                     <div class="space-y-1.5 ml-auto">
-                        <p class="flex"><span class="font-black min-w-[120px] text-slate-400">NO. INVOICE</span> <span class="mr-2">:</span> <span class="font-black text-slate-800">{{ getOfficialNumber(invoice) }}</span></p>
+                        <p class="flex"><span class="font-black min-w-[120px] text-slate-400">NO. INVOICE</span> <span class="mr-2">:</span> <span class="font-black text-slate-800">{{ settings.invoiceNumber }}</span></p>
                         <p class="flex"><span class="font-black min-w-[120px] text-slate-400">NO. SURAT JALAN</span> <span class="mr-2">:</span> <span class="font-black text-slate-800">{{ invoice?.delivery_order?.no_sj || '-' }}</span></p>
                         <p class="flex"><span class="font-black min-w-[120px] text-slate-400">JATUH TEMPO</span> <span class="mr-2">:</span> <span class="font-black text-rose-600 uppercase">{{ dueDateText }}</span></p>
                         <p class="flex"><span class="font-black min-w-[120px] text-slate-400">STATUS</span> <span class="mr-2">:</span> <span :class="[invoice?.status === 'lunas' ? 'text-emerald-600' : 'text-rose-600']" class="font-black uppercase">{{ statusConfig.label }}</span></p>
@@ -186,27 +334,27 @@ const print = () => window.print();
                     <table class="w-full border-collapse border-2 border-[#1E3A5F]">
                         <thead>
                             <tr class="bg-[#1E3A5F] text-white">
-                                <th class="border border-white/20 p-3 text-[10px] font-black uppercase w-10 text-center">NO</th>
-                                <th class="border border-white/20 p-3 text-[10px] font-black uppercase text-left">DESKRIPSI BARANG / PRODUK</th>
-                                <th class="border border-white/20 p-3 text-[10px] font-black uppercase text-center w-20">QTY</th>
-                                <th class="border border-white/20 p-3 text-[10px] font-black uppercase text-right w-36">HARGA SATUAN</th>
-                                <th class="border border-white/20 p-3 text-[10px] font-black uppercase text-right w-40 pr-4">TOTAL</th>
+                                <th class="border border-white/20 p-2 text-[10px] font-black uppercase w-10 text-center">NO</th>
+                                <th class="border border-white/20 p-2 text-[10px] font-black uppercase text-left">DESKRIPSI BARANG / PRODUK</th>
+                                <th class="border border-white/20 p-2 text-[10px] font-black uppercase text-center w-20">QTY</th>
+                                <th class="border border-white/20 p-2 text-[10px] font-black uppercase text-right w-36">HARGA SATUAN</th>
+                                <th class="border border-white/20 p-2 text-[10px] font-black uppercase text-right w-40 pr-4">TOTAL</th>
                             </tr>
                         </thead>
                         <tbody class="text-[11px] text-slate-700">
                             <tr v-for="(item, idx) in invoice?.delivery_order?.items || []" :key="idx" class="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                                <td class="border-x border-slate-200 p-3 text-center font-bold text-slate-400">{{ idx + 1 }}</td>
-                                <td class="border-x border-slate-200 p-3 font-black text-[#1E3A5F] uppercase">{{ item.product?.nama || '-' }}</td>
-                                <td class="border-x border-slate-200 p-3 text-center font-black">{{ item.quantity || 0 }} PCS</td>
-                                <td class="border-x border-slate-200 p-3 text-right font-bold">{{ formatRupiah(item.harga) }}</td>
-                                <td class="border-x border-slate-200 p-3 text-right pr-4 font-black text-slate-900">{{ formatRupiah(item.subtotal) }}</td>
+                                <td class="border-x border-slate-200 p-1.5 text-center font-bold text-slate-400">{{ idx + 1 }}</td>
+                                <td class="border-x border-slate-200 p-1.5 font-black text-[#1E3A5F] uppercase text-[10px]">{{ item.product?.nama || '-' }}</td>
+                                <td class="border-x border-slate-200 p-1.5 text-center font-black text-[10px]">{{ item.quantity || 0 }} PCS</td>
+                                <td class="border-x border-slate-200 p-1.5 text-right font-bold text-[10px]">{{ formatRupiah(item.harga) }}</td>
+                                <td class="border-x border-slate-200 p-1.5 text-right pr-4 font-black text-slate-900 text-[10px]">{{ formatRupiah(item.subtotal) }}</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
 
                 <!-- BREAKDOWN & BANK INFO -->
-                <div class="mt-8 flex justify-between items-start gap-12 no-page-break">
+                <div class="mt-6 flex justify-between items-start gap-12 no-page-break">
                     <div class="w-1/2">
                         <!-- 1. TERBILANG (MATCH GRAND TOTAL) -->
                         <div class="bg-slate-50 p-4 border-l-4 border-[#1E3A5F] mb-6">
@@ -217,22 +365,14 @@ const print = () => window.print();
                         </div>
                         
                         <div class="grid grid-cols-1 gap-3">
-                            <div class="flex items-center gap-4 p-3 border border-slate-100 rounded-xl bg-white shadow-sm">
-                                <div class="w-12 h-10 flex items-center justify-center rounded-lg overflow-hidden">
-                                    <img src="/images/banks/bca.png" class="w-full h-full object-contain" alt="BCA">
+                            <div v-for="(bank, index) in settings.banks" :key="index" class="flex items-center gap-4 p-3 border border-slate-100 rounded-xl bg-white shadow-sm transition-all hover:border-indigo-100">
+                                <div class="w-12 h-10 flex items-center justify-center rounded-lg bg-slate-50 overflow-hidden">
+                                    <img v-if="bank.logo" :src="bank.logo" class="w-full h-full object-contain p-1" :alt="bank.name">
+                                    <PhBank v-else :size="24" weight="duotone" class="text-indigo-600" />
                                 </div>
                                 <div class="text-[10px]">
-                                    <p class="font-black text-[#1E3A5F] tracking-widest uppercase">Bank BCA: 1234-5678-90</p>
-                                    <p class="font-bold text-slate-400 uppercase">A/N CV. Listrindo Jaya Elektrik</p>
-                                </div>
-                            </div>
-                            <div class="flex items-center gap-4 p-3 border border-slate-100 rounded-xl bg-white shadow-sm">
-                                <div class="w-12 h-10 flex items-center justify-center rounded-lg overflow-hidden">
-                                    <img src="/images/banks/mandiri.png" class="w-full h-full object-contain" alt="Mandiri">
-                                </div>
-                                <div class="text-[10px]">
-                                    <p class="font-black text-[#1E3A5F] tracking-widest uppercase">Bank Mandiri: 0987-6543-21</p>
-                                    <p class="font-bold text-slate-400 uppercase">A/N CV. Listrindo Jaya Elektrik</p>
+                                    <p class="font-black text-[#1E3A5F] tracking-widest uppercase">{{ bank.number }}</p>
+                                    <p class="font-bold text-slate-400 uppercase leading-tight">{{ bank.holder }}</p>
                                 </div>
                             </div>
                         </div>
@@ -244,8 +384,8 @@ const print = () => window.print();
                             <span class="font-black text-slate-800">{{ formatRupiah(invoice?.total) }}</span>
                         </div>
                         <div class="flex justify-between py-1.5 border-b border-slate-50">
-                            <span class="font-bold text-slate-400 uppercase tracking-tighter">PPN (11%)</span>
-                            <span class="font-black text-slate-800">{{ formatRupiah((invoice?.total || 0) * 0.11) }}</span>
+                            <span class="font-bold text-slate-400 uppercase tracking-tighter">PPN ({{ settings.ppnPercent }}%)</span>
+                            <span class="font-black text-slate-800">{{ formatRupiah((invoice?.total || 0) * (settings.ppnPercent / 100)) }}</span>
                         </div>
                         <div class="flex justify-between py-3 bg-[#1E3A5F] text-white px-4 mt-2 shadow-lg shadow-blue-900/10">
                             <span class="font-black uppercase tracking-widest">GRAND TOTAL</span>
@@ -255,19 +395,12 @@ const print = () => window.print();
                 </div>
 
                 <!-- 3 & 7. SIGNATURE SECTION (PREVENT PAGE BREAK & NO OVERLAP) -->
-                <div class="signature-section mt-auto pt-12 grid grid-cols-3 gap-12 text-center text-[11px]">
+                <div class="signature-section mt-auto pt-8 grid grid-cols-2 gap-12 text-center text-[11px]">
                     <div class="space-y-20">
                         <p class="font-black uppercase tracking-widest text-slate-400">Penerima / Customer</p>
                         <div>
                             <div class="border-b-2 border-slate-800 w-40 mx-auto"></div>
-                            <p class="text-[8px] font-bold text-slate-300 uppercase mt-2">( Nama Terang & Stempel )</p>
-                        </div>
-                    </div>
-                    <div class="space-y-20">
-                        <p class="font-black uppercase tracking-widest text-slate-400">Keuangan</p>
-                        <div>
-                            <div class="border-b-2 border-slate-800 w-40 mx-auto"></div>
-                            <p class="text-[8px] font-bold text-slate-300 uppercase mt-2">( Mengetahui )</p>
+                            <p class="text-[8px] font-bold text-slate-800 uppercase mt-2 italic">{{ settings.receiverName || '( Nama Terang & Stempel )' }}</p>
                         </div>
                     </div>
                     <!-- 7. FIX OVERLAP STEMPEL -->
@@ -285,7 +418,7 @@ const print = () => window.print();
 
                         <div>
                             <div class="border-b-2 border-slate-800 w-48 mx-auto"></div>
-                            <p class="text-[8px] font-black text-slate-800 uppercase mt-2 italic tracking-widest">Administrator WMS</p>
+                            <p class="text-[8px] font-black text-slate-800 uppercase mt-2 italic tracking-widest">{{ settings.signatoryName }}</p>
                         </div>
                     </div>
                 </div>
@@ -293,9 +426,8 @@ const print = () => window.print();
                 <!-- 10. DISCLAIMER & TERMS -->
                 <div class="mt-12 pt-6 border-t border-slate-100">
                     <p class="text-[8px] italic text-slate-400 text-center leading-relaxed font-medium uppercase tracking-tighter">
-                        
-                        Mohon konfirmasi bukti transfer via WhatsApp: 0812-2507-9988. <br>
-                        "Pembayaran sah apabila sudah diterima di rekening perusahaan kami."
+                        {{ settings.footerLine1 }} <br>
+                        {{ settings.footerLine2 }}
                     </p>
                 </div>
             </div>

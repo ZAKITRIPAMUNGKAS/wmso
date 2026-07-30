@@ -55,7 +55,7 @@ class HandleInertiaRequests extends Middleware
                     }
                     return [
                         // 1. Low Stock (Using Scope)
-                        ...\App\Models\Product::lowStock(10)
+                        ...\App\Models\Product::lowStock()
                             ->limit(2)
                             ->get()
                             ->map(fn($p) => [

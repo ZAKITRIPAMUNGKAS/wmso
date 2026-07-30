@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CompanySetting;
+use App\Services\FaviconService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
@@ -25,6 +26,14 @@ class SettingsController extends Controller
             $path = $request->file('settings.company_logo')->store('company', 'public');
             CompanySetting::where('key', 'company_logo')->update(['value' => $path]);
             Cache::forget("company_setting_company_logo");
+
+            // Auto-regenerate all favicon sizes from the new logo
+            try {
+                app(FaviconService::class)->generateFromStoragePath($path);
+            } catch (\Throwable $e) {
+                // Non-critical: log but don't block the response
+                \Log::warning("Favicon regeneration failed: {$e->getMessage()}");
+            }
         }
 
         foreach ($settings as $key => $value) {

@@ -9,7 +9,8 @@ import { PhNotePencil, PhTrash, PhWarehouse, PhMapPin } from "@phosphor-icons/vu
 
 const props = defineProps({
     warehouses: Object,
-    filters: Object
+    filters: Object,
+    next_code: String
 });
 
 const showModal = ref(false);
@@ -30,7 +31,8 @@ const openModal = (item = null) => {
         form.alamat = item.alamat;
     } else {
         form.reset();
-        form.kode_gudang = 'GDN-' + Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+        // Use sequential code from server
+        form.kode_gudang = props.next_code;
     }
     showModal.value = true;
 };

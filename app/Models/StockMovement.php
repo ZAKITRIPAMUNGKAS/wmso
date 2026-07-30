@@ -24,6 +24,11 @@ class StockMovement extends Model
         return $this->belongsTo(Warehouse::class);
     }
 
+    public function rack(): BelongsTo
+    {
+        return $this->belongsTo(Rack::class);
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

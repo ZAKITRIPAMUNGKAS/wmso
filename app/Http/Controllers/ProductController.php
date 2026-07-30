@@ -22,16 +22,24 @@ class ProductController extends Controller
             ->paginate(10)
             ->withQueryString();
 
+        $lastProduct = Product::where('kode_barang', 'like', 'PRD-%')
+            ->orderByRaw('LENGTH(kode_barang) DESC, kode_barang DESC')
+            ->first();
+        
+        $nextNumber = $lastProduct ? (int) str_replace('PRD-', '', $lastProduct->kode_barang) + 1 : 1;
+        $nextCode = 'PRD-' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+
         return Inertia::render('MasterData/Products', [
             'products' => $products,
             'filters' => request()->all('search'),
+            'next_code' => $nextCode,
         ]);
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'kode_barang' => 'required|unique:products',
+            'kode_barang' => 'nullable|string|unique:products,kode_barang|max:50',
             'nama' => 'required',
             'merk' => 'required',
             'tipe' => 'required',
@@ -40,14 +48,26 @@ class ProductController extends Controller
             'stok_minimum' => 'required|integer',
         ]);
 
-        Product::create($validated);
+        if (empty($validated['kode_barang'])) {
+            $lastProduct = Product::where('kode_barang', 'like', 'PRD-%')
+                ->orderByRaw('LENGTH(kode_barang) DESC, kode_barang DESC')
+                ->first();
+            $nextNumber = $lastProduct ? (int) str_replace('PRD-', '', $lastProduct->kode_barang) + 1 : 1;
+            $validated['kode_barang'] = 'PRD-' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+        }
 
-        return redirect()->back();
+        $product = Product::create($validated);
+
+        // Dispatch stock sync to Olshop
+        \App\Jobs\SyncStockToOlshop::dispatch($product->id, now()->format('Y-m-d\TH:i:s\Z'));
+
+        return redirect()->back()->with('success', 'Produk baru berhasil ditambahkan!');
     }
 
     public function update(Request $request, Product $product)
     {
         $validated = $request->validate([
+            'kode_barang' => 'nullable|string|unique:products,kode_barang,' . $product->id . '|max:50',
             'nama' => 'required',
             'merk' => 'required',
             'tipe' => 'required',
@@ -56,14 +76,88 @@ class ProductController extends Controller
             'stok_minimum' => 'required|integer',
         ]);
 
+        if (empty($validated['kode_barang'])) {
+            $validated['kode_barang'] = $product->kode_barang;
+        }
+
         $product->update($validated);
 
-        return redirect()->back();
+        // Dispatch stock sync to Olshop
+        \App\Jobs\SyncStockToOlshop::dispatch($product->id, now()->format('Y-m-d\TH:i:s\Z'));
+
+        return redirect()->back()->with('success', 'Data produk berhasil diperbarui!');
     }
 
     public function destroy(Product $product)
     {
         $product->delete();
-        return redirect()->back();
+        return redirect()->back()->with('success', 'Produk berhasil dihapus!');
+    }
+
+    public function show(Product $product)
+    {
+        // Load warehouse stocks
+        $stocks = \App\Models\ProductStock::where('product_id', $product->id)
+            ->with('warehouse')
+            ->get();
+
+        // Retrieve paginated stock movements
+        $movements = \App\Models\StockMovement::where('product_id', $product->id)
+            ->with(['warehouse', 'user'])
+            ->orderBy('created_at', 'desc')
+            ->orderBy('id', 'desc')
+            ->paginate(15);
+
+        // Resolve references in bulk
+        $goodsReceiptIds = [];
+        $deliveryOrderIds = [];
+        $stockTransferIds = [];
+        $stockAdjustmentIds = [];
+
+        foreach ($movements as $m) {
+            if ($m->reference_type === 'goods_receipt') $goodsReceiptIds[] = $m->reference_id;
+            if ($m->reference_type === 'delivery_order') $deliveryOrderIds[] = $m->reference_id;
+            if ($m->reference_type === 'stock_transfer') $stockTransferIds[] = $m->reference_id;
+            if ($m->reference_type === 'stock_adjustment') $stockAdjustmentIds[] = $m->reference_id;
+        }
+
+        $goodsReceipts = \App\Models\GoodsReceipt::whereIn('id', $goodsReceiptIds)->get()->keyBy('id');
+        $deliveryOrders = \App\Models\DeliveryOrder::whereIn('id', $deliveryOrderIds)->get()->keyBy('id');
+        $stockTransfers = \App\Models\StockTransfer::whereIn('id', $stockTransferIds)->get()->keyBy('id');
+        $stockAdjustments = \App\Models\StockAdjustment::whereIn('id', $stockAdjustmentIds)->get()->keyBy('id');
+
+        $movements->getCollection()->transform(function ($m) use ($goodsReceipts, $deliveryOrders, $stockTransfers, $stockAdjustments) {
+            $code = "Ref #{$m->reference_id}";
+            $route = null;
+            if ($m->reference_type === 'goods_receipt') {
+                $ref = $goodsReceipts->get($m->reference_id);
+                $code = $ref ? $ref->no_receipt : "Receipt #{$m->reference_id}";
+                $route = $ref ? route('barang-masuk.show', $m->reference_id) : null;
+            } elseif ($m->reference_type === 'delivery_order') {
+                $ref = $deliveryOrders->get($m->reference_id);
+                $code = $ref ? $ref->no_delivery : "DO #{$m->reference_id}";
+                $route = $ref ? route('barang-keluar.show', $m->reference_id) : null;
+            } elseif ($m->reference_type === 'stock_transfer') {
+                $ref = $stockTransfers->get($m->reference_id);
+                $code = $ref ? $ref->no_transfer : "Transfer #{$m->reference_id}";
+                $route = $ref ? route('stock-transfers.show', $m->reference_id) : null;
+            } elseif ($m->reference_type === 'stock_adjustment') {
+                $ref = $stockAdjustments->get($m->reference_id);
+                $code = $ref ? $ref->no_adjustment : "Adjustment #{$m->reference_id}";
+                $route = $ref ? route('stock-adjustments.show', $m->reference_id) : null;
+            }
+            $m->reference_code = $code;
+            $m->reference_route = $route;
+            return $m;
+        });
+
+        $totalStock = $stocks->sum('quantity');
+
+        return Inertia::render('MasterData/ProductShow', [
+            'product' => $product,
+            'stocks' => $stocks,
+            'totalStock' => $totalStock,
+            'movements' => $movements,
+        ]);
     }
 }

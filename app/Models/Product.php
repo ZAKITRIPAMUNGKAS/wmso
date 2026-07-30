@@ -17,6 +17,11 @@ class Product extends Model
         return $this->hasMany(ProductStock::class);
     }
 
+    public function rackStocks(): HasMany
+    {
+        return $this->hasMany(ProductRackStock::class);
+    }
+
     public function purchaseOrderItems(): HasMany
     {
         return $this->hasMany(PurchaseOrderItem::class);
@@ -40,9 +45,15 @@ class Product extends Model
     /**
      * Scope for products with low stock.
      */
-    public function scopeLowStock($query, $threshold = 10)
+    public function scopeLowStock($query, $threshold = null)
     {
-        return $query->withSum('stocks as total_stock', 'quantity')
-            ->having('total_stock', '<', $threshold);
+        $query->select('products.*')
+            ->withSum('stocks as total_stock', 'quantity');
+
+        if ($threshold !== null) {
+            return $query->whereRaw('(select COALESCE(sum(quantity), 0) from product_stocks where product_stocks.product_id = products.id) < ?', [$threshold]);
+        }
+
+        return $query->whereRaw('(select COALESCE(sum(quantity), 0) from product_stocks where product_stocks.product_id = products.id) < COALESCE(products.stok_minimum, 0)');
     }
 }

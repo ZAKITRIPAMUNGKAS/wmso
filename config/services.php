@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'api' => [
+        'olshop_token' => env('API_OLSHOP_TOKEN'), // Token to authorize requests FROM Olshop
+        'wms_token' => env('API_WMS_TOKEN'), // Token to authorize requests TO Olshop
+        'olshop_url' => env('OLSHOP_API_URL', 'https://listrindo.com'),
+        'default_warehouse_id' => env('WMS_DEFAULT_WAREHOUSE_ID', 1),
+    ],
 ];

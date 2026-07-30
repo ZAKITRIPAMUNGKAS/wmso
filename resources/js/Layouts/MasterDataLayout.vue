@@ -20,9 +20,9 @@ defineEmits(['search', 'add']);
             <div class="overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
                 <div class="flex items-center gap-1 p-1 bg-slate-200/50 rounded-2xl w-max">
                     <Link 
-                        v-for="tab in ['Produk', 'Customer', 'Supplier', 'Gudang']"
+                        v-for="tab in ['Produk', 'Customer', 'Supplier', 'Gudang', 'Rak']"
                         :key="tab"
-                        :href="route(tab === 'Produk' ? 'products.index' : tab === 'Customer' ? 'customers.index' : tab === 'Supplier' ? 'suppliers.index' : 'warehouses.index')" 
+                        :href="route(tab === 'Produk' ? 'products.index' : tab === 'Customer' ? 'customers.index' : tab === 'Supplier' ? 'suppliers.index' : tab === 'Gudang' ? 'warehouses.index' : 'racks.index')" 
                         :class="[
                             'px-5 py-2.5 text-sm transition-all whitespace-nowrap min-h-[40px] flex items-center justify-center',
                             activeTab === tab ? 'font-bold text-indigo-600 bg-white shadow-sm rounded-xl' : 'font-bold text-slate-500 hover:text-slate-800 rounded-lg'
@@ -47,7 +47,7 @@ defineEmits(['search', 'add']);
                         class="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all placeholder:text-slate-400"
                     >
                 </div>
-                <button @click="$emit('add')" class="btn-primary flex-1 sm:flex-none flex items-center justify-center gap-2">
+                <button v-if="addButtonLabel" @click="$emit('add')" class="btn-primary flex-1 sm:flex-none flex items-center justify-center gap-2">
                     <PhPlus weight="bold" /> <span class="tracking-tight">{{ addButtonLabel }}</span>
                 </button>
             </div>

@@ -11,13 +11,14 @@ import {
 import { uiStore } from '@/Stores/uiStore';
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 
+const props = defineProps({
+    title: String,
+    isReady: Boolean
+});
+
 const page = usePage();
 const auth = computed(() => page.props.auth);
 const notifications = computed(() => page.props.notifications);
-
-defineProps({
-    title: String
-});
 
 const showNotifications = ref(false);
 const showUserMenu = ref(false);
@@ -47,28 +48,25 @@ const markAsRead = () => {
 </script>
 
 <template>
-    <header class="h-16 sticky top-0 bg-white/80 backdrop-blur-xl border-b border-slate-200 flex justify-between items-center px-4 md:px-8 shadow-sm z-30 shrink-0 font-sans print:hidden">
+    <header 
+        class="h-16 sticky top-0 bg-white/80 backdrop-blur-xl border-b border-slate-200 flex justify-between items-center px-4 md:px-8 shadow-sm z-30 shrink-0 font-sans print:hidden transition-all duration-700 delay-300"
+        :class="isReady ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'"
+    >
         <div class="flex items-center gap-4">
             <!-- Mobile Toggle -->
             <button @click="uiStore.toggleSidebar()" class="lg:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-95">
                 <PhList :size="24" weight="bold" />
             </button>
 
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-3 animate-fade-down stagger-4">
                 <PhPackage :size="24" weight="fill" class="text-indigo-600 lg:hidden" />
                 <h1 class="text-lg md:text-xl font-black text-slate-800 tracking-tight truncate max-w-[150px] sm:max-w-none">{{ title }}</h1>
             </div>
         </div>
 
-        <!-- Desktop Search -->
-        <div class="hidden md:flex flex-1 max-w-md mx-8">
-            <div class="relative w-full group">
-                <PhMagnifyingGlass :size="18" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
-                <input type="text" placeholder="Pencarian global..." class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all">
-            </div>
-        </div>
+        <div class="flex-1"></div>
 
-        <div class="flex items-center gap-2 md:gap-4">
+        <div class="flex items-center gap-2 md:gap-4 animate-fade-down stagger-6">
             <!-- Notifications -->
             <div class="relative dropdown-trigger">
                 <button @click="showNotifications = !showNotifications" class="relative p-2.5 text-slate-400 hover:bg-slate-100 rounded-xl transition-all active:scale-95" :class="{ 'bg-slate-100 text-indigo-600': showNotifications }">
@@ -109,7 +107,7 @@ const markAsRead = () => {
             <!-- User Menu -->
             <div class="relative dropdown-trigger">
                 <button @click="showUserMenu = !showUserMenu" class="flex items-center gap-3 p-1.5 pr-3 hover:bg-slate-100 rounded-2xl transition-all active:scale-95" :class="{ 'bg-slate-100': showUserMenu }">
-                    <img :src="`https://ui-avatars.com/api/?name=${auth.user.name}&background=4f46e5&color=fff`" class="w-9 h-9 rounded-xl shadow-md border border-white" loading="lazy" decoding="async">
+                    <img :src="`https://ui-avatars.com/api/?name=${auth.user.name}&background=025cca&color=fff`" class="w-9 h-9 rounded-xl shadow-md border border-white" loading="lazy" decoding="async">
                     <div class="hidden sm:flex flex-col items-start">
                         <span class="text-xs font-black text-slate-800 leading-tight">{{ auth.user.name }}</span>
                         <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{{ auth.user.role?.replace('_', ' ') || 'Admin' }}</span>
@@ -136,5 +134,6 @@ const markAsRead = () => {
         </div>
     </header>
 </template>
+
 
 

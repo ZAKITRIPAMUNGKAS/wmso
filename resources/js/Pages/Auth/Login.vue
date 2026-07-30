@@ -2,11 +2,12 @@
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 import InputError from '@/Components/InputError.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
+import { ref } from 'vue';
 import { 
-    PhPackage, 
     PhEnvelopeSimple, 
     PhLockSimple, 
-    PhArrowRight 
+    PhArrowRight,
+    PhCircleNotch
 } from "@phosphor-icons/vue";
 
 defineProps({
@@ -24,88 +25,162 @@ const form = useForm({
     remember: false,
 });
 
+const showError = ref(false);
+const authStatus = ref('');
+const authMessage = ref('');
+const isSubmitting = ref(false);
+
 const submit = () => {
+    if (form.processing || isSubmitting.value) return;
+
+    isSubmitting.value = true;
+    authStatus.value = 'loading';
+    authMessage.value = 'Memvalidasi Akses...';
+
     form.post(route('login'), {
-        onFinish: () => form.reset('password'),
+        onSuccess: () => {
+            authStatus.value = 'success';
+            authMessage.value = 'Berhasil Masuk! Membuka Dashboard...';
+        },
+        onError: () => {
+            authStatus.value = 'error';
+            authMessage.value = 'Gagal Masuk! Periksa Email & Password';
+            
+            showError.value = true;
+
+            setTimeout(() => {
+                isSubmitting.value = false;
+                authStatus.value = '';
+                authMessage.value = '';
+                form.reset('password');
+
+                setTimeout(() => {
+                    showError.value = false;
+                }, 4000);
+            }, 1800);
+        },
+        onFinish: () => {
+            if (authStatus.value !== 'error') {
+                form.reset('password');
+            }
+        }
     });
 };
 </script>
 
 <template>
-    <GuestLayout>
-        <Head title="Login" />
-
-        <div class="text-center mb-8 md:mb-10">
-            <div class="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 bg-indigo-600 rounded-2xl md:rounded-3xl mb-4 md:mb-6 shadow-lg shadow-indigo-500/30 transform hover:rotate-6 transition-all duration-300">
-                <PhPackage :size="32" weight="fill" class="text-white md:hidden" />
-                <PhPackage :size="40" weight="fill" class="text-white hidden md:block" />
+    <!-- Floating Error Popup -->
+    <div v-if="showError && Object.keys(form.errors).length > 0" class="fixed top-8 left-1/2 -translate-x-1/2 z-[200] w-[90%] max-w-sm animate-bounce-in">
+        <div class="bg-rose-500 text-white p-4 rounded-2xl shadow-2xl shadow-rose-200 border border-rose-400 flex items-center gap-4">
+            <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
+                <PhLockSimple :size="20" weight="fill" />
             </div>
-            <h2 class="text-2xl md:text-4xl font-black text-white tracking-tight leading-tight">{{ $page.props.company.name }}</h2>
-            <p v-if="$page.props.company.tagline" class="text-slate-400 mt-2 md:mt-3 text-xs md:text-base font-bold uppercase tracking-widest opacity-60">{{ $page.props.company.tagline }}</p>
+            <div>
+                <p class="text-[10px] font-black uppercase tracking-widest opacity-70">Akses Ditolak</p>
+                <p class="text-xs font-bold leading-tight">{{ Object.values(form.errors)[0] }}</p>
+            </div>
+            <button @click="showError = false" class="ml-auto text-white/50 hover:text-white">
+                <PhArrowRight :size="16" weight="bold" />
+            </button>
+        </div>
+    </div>
+
+    <GuestLayout :processing="isSubmitting" :auth-status="authStatus" :auth-message="authMessage">
+        <Head title="Masuk Sistem" />
+
+        <!-- Form Title (Exact match SIGN IN NOW style) -->
+        <div class="text-center mb-8 animate-fade-down">
+            <h2 class="text-3xl font-black text-slate-900 tracking-wide uppercase">
+                SIGN IN NOW
+            </h2>
         </div>
 
-        <div v-if="status" class="mb-4 text-sm font-bold text-emerald-400 text-center bg-emerald-500/10 py-3 rounded-xl border border-emerald-500/20">
+        <div v-if="status" class="mb-4 text-xs font-bold text-emerald-600 text-center bg-emerald-50 py-3 rounded-full border border-emerald-100 animate-fade-in">
             {{ status }}
         </div>
 
-        <form @submit.prevent="submit" class="space-y-5 md:space-y-6">
-            <div class="space-y-2">
-                <label class="block text-xs md:text-sm font-bold text-slate-300 ml-1 uppercase tracking-wider">Email / Username</label>
+        <form @submit.prevent="submit" class="space-y-4 md:space-y-5">
+            <!-- Email Input (Pill Shaped matching reference image) -->
+            <div class="space-y-1 animate-fade-up stagger-1">
                 <div class="relative group">
-                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors duration-300">
-                        <PhEnvelopeSimple :size="20" class="md:hidden" />
-                        <PhEnvelopeSimple :size="24" class="hidden md:block" />
+                    <span class="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#046c4e] transition-colors duration-300">
+                        <PhEnvelopeSimple :size="20" />
                     </span>
                     <input 
                         type="email" 
                         v-model="form.email"
-                        placeholder="email@contoh.com" 
+                        placeholder="Email" 
                         required
                         autofocus
-                        class="w-full bg-white/5 border border-white/10 text-white rounded-2xl pl-12 pr-4 py-3.5 md:py-5 outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all placeholder:text-slate-600 text-sm md:text-base font-bold"
+                        autocomplete="username"
+                        class="w-full bg-white border border-slate-300 text-slate-900 rounded-full pl-14 pr-6 py-4 outline-none focus:ring-4 focus:ring-[#046c4e]/10 focus:border-[#046c4e] transition-all placeholder:text-slate-400 text-sm font-semibold shadow-sm"
                     >
                 </div>
-                <InputError class="mt-2" :message="form.errors.email" />
+                <InputError class="mt-1 ml-5" :message="form.errors.email" />
             </div>
 
-            <div class="space-y-2">
-                <div class="flex justify-between items-center px-1">
-                    <label class="text-xs md:text-sm font-bold text-slate-300 uppercase tracking-wider">Password</label>
-                    <Link 
-                        v-if="canResetPassword"
-                        :href="route('password.request')" 
-                        class="text-[10px] md:text-xs text-indigo-400 hover:text-indigo-300 font-bold transition-colors uppercase tracking-widest"
-                    >
-                        Lupa?
-                    </Link>
-                </div>
+            <!-- Password Input (Pill Shaped matching reference image) -->
+            <div class="space-y-1 animate-fade-up stagger-2">
                 <div class="relative group">
-                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors duration-300">
-                        <PhLockSimple :size="20" class="md:hidden" />
-                        <PhLockSimple :size="24" class="hidden md:block" />
+                    <span class="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#046c4e] transition-colors duration-300">
+                        <PhLockSimple :size="20" />
                     </span>
                     <input 
                         type="password" 
                         v-model="form.password"
-                        placeholder="••••••••" 
+                        placeholder="Password" 
                         required
-                        class="w-full bg-white/5 border border-white/10 text-white rounded-2xl pl-12 pr-4 py-3.5 md:py-5 outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all placeholder:text-slate-600 font-black text-sm md:text-base"
+                        autocomplete="current-password"
+                        class="w-full bg-white border border-slate-300 text-slate-900 rounded-full pl-14 pr-6 py-4 outline-none focus:ring-4 focus:ring-[#046c4e]/10 focus:border-[#046c4e] transition-all placeholder:text-slate-400 text-sm font-semibold shadow-sm"
                     >
                 </div>
-                <InputError class="mt-2" :message="form.errors.password" />
+                <InputError class="mt-1 ml-5" :message="form.errors.password" />
             </div>
 
-            <button 
-                type="submit" 
-                :class="{ 'opacity-25': form.processing }"
-                :disabled="form.processing"
-                class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 md:py-5 rounded-2xl shadow-xl shadow-indigo-500/20 transition-all duration-300 transform active:scale-[0.98] group flex items-center justify-center gap-3 mt-4 md:mt-8"
-            >
-                Masuk Sistem
-                <PhArrowRight :size="20" weight="bold" class="transition-transform group-hover:translate-x-1" />
-            </button>
+            <!-- Checkbox & Forgot Password Row -->
+            <div class="flex justify-between items-center px-4 py-1 animate-fade-up stagger-3">
+                <label class="flex items-center gap-2.5 cursor-pointer text-xs font-semibold text-slate-600 select-none">
+                    <input type="checkbox" v-model="form.remember" class="rounded border-slate-300 text-[#046c4e] focus:ring-[#046c4e] w-4 h-4" />
+                    <span>Ingat Saya</span>
+                </label>
+
+                <Link 
+                    v-if="canResetPassword"
+                    :href="route('password.request')" 
+                    class="text-xs text-slate-500 hover:text-[#046c4e] font-bold transition-colors underline underline-offset-2"
+                >
+                    Lupa Password?
+                </Link>
+            </div>
+
+            <!-- Submit Button (Pill Shaped Deep Emerald Button matching reference image) -->
+            <div class="pt-2 animate-fade-up stagger-4">
+                <button 
+                    type="submit" 
+                    :disabled="isSubmitting"
+                    class="w-full bg-[#046c4e] hover:bg-[#03543d] text-white font-bold py-4 rounded-full shadow-lg shadow-[#046c4e]/25 transition-all duration-300 transform active:scale-[0.98] flex items-center justify-center gap-2 tracking-wide text-base cursor-pointer"
+                >
+                    <template v-if="isSubmitting">
+                        <PhCircleNotch :size="20" weight="bold" class="animate-spin" />
+                        Memproses...
+                    </template>
+                    <template v-else>
+                        Sign In
+                    </template>
+                </button>
+            </div>
         </form>
 
+        <!-- Divider Line -->
+        <div class="my-6 flex items-center justify-center gap-4 text-xs font-semibold text-slate-400 uppercase tracking-widest">
+            <div class="h-px bg-slate-200 flex-1"></div>
+            <span>Atau</span>
+            <div class="h-px bg-slate-200 flex-1"></div>
+        </div>
 
+        <!-- Footer Link (Matching reference image) -->
+        <div class="text-center text-xs font-semibold text-slate-500">
+            Belum Memiliki Akun? <span class="text-[#046c4e] font-bold cursor-pointer hover:underline">Hubungi Admin Gudang</span>
+        </div>
     </GuestLayout>
 </template>

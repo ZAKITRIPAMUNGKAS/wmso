@@ -60,6 +60,22 @@ const filteredInvoices = computed(() => {
 const buktiBayarPreview = ref(null);
 const buktiBayarName   = ref('');
 
+const formatNumber = (num) => {
+    if (!num && num !== 0) return '';
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+};
+
+const parseNumber = (str) => {
+    return parseInt(str.replace(/\./g, '')) || 0;
+};
+
+const formattedNominal = computed({
+    get: () => formatNumber(form.nominal),
+    set: (val) => {
+        form.nominal = parseNumber(val);
+    }
+});
+
 const form = useForm({
     invoice_id:  '',
     nominal:     '',
@@ -222,7 +238,7 @@ const getProgressColor = (percent) => {
         </ResponsiveTable>
 
         <Modal :show="showPaymentModal" title="Konfirmasi Pembayaran" @close="showPaymentModal = false">
-            <form @submit.prevent="submit" class="flex flex-col h-full md:h-auto font-sans">
+            <form @submit.prevent="submit" class="flex flex-col font-sans">
                 <div class="p-6 md:p-8 space-y-6">
                     <div class="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100/50 mb-2">
                         <div class="flex items-center gap-3 mb-2">
@@ -243,7 +259,7 @@ const getProgressColor = (percent) => {
                             <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest ml-1">Nominal</label>
                             <div class="relative">
                                 <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-black text-sm">Rp</span>
-                                <input type="number" v-model="form.nominal" class="input-base !pl-10 font-black" placeholder="0">
+                                <input type="text" v-model="formattedNominal" class="input-base !pl-10 font-black" placeholder="0">
                             </div>
                             <InputError :message="form.errors.nominal" />
                         </div>
@@ -331,11 +347,10 @@ const getProgressColor = (percent) => {
                             </label>
                             <InputError :message="form.errors.bukti_bayar" class="mt-1" />
                         </div>
-
                     </div><!-- /grid -->
                 </div><!-- /p-6 -->
 
-                <div class="sticky bottom-0 bg-slate-50/80 backdrop-blur-md p-6 md:p-8 border-t border-slate-100 flex flex-col sm:flex-row justify-end gap-3 mt-auto shrink-0">
+                <div class="sticky bottom-0 bg-white/90 backdrop-blur-md p-6 md:p-8 border-t border-slate-100 flex flex-col sm:flex-row justify-end gap-3 shrink-0 z-20">
                     <button type="button" @click="showPaymentModal = false" class="btn-secondary w-full sm:w-auto">Batal</button>
                     <button type="submit" :disabled="form.processing" class="btn-primary w-full sm:w-auto">
                         Konfirmasi Bayar

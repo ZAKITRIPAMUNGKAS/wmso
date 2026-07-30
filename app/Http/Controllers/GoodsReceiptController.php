@@ -36,6 +36,7 @@ class GoodsReceiptController extends Controller
             'suppliers' => \App\Models\Supplier::all(),
             'warehouses' => Warehouse::all(),
             'products' => Product::all(),
+            'racks' => \App\Models\Rack::all(),
         ]);
     }
 
@@ -60,6 +61,10 @@ class GoodsReceiptController extends Controller
                 'items' => 'required|array|min:1',
                 'items.*.product_id' => 'required|exists:products,id',
                 'items.*.quantity' => 'required|integer|min:1',
+                'items.*.rack_id' => 'nullable|exists:racks,id',
+                'items.*.batch_number' => 'nullable|string',
+                'items.*.expired_at' => 'nullable|date',
+                'items.*.serial_number' => 'nullable|string',
             ]);
 
             $filePath = null;
@@ -91,6 +96,10 @@ class GoodsReceiptController extends Controller
                         'goods_receipt_id' => $receipt->id,
                         'product_id' => $item['product_id'],
                         'quantity' => $item['quantity'],
+                        'rack_id' => $item['rack_id'] ?? null,
+                        'batch_number' => $item['batch_number'] ?? null,
+                        'expired_at' => $item['expired_at'] ?? null,
+                        'serial_number' => $item['serial_number'] ?? null,
                     ]);
 
                     $this->stockService->adjustStock(
@@ -100,7 +109,13 @@ class GoodsReceiptController extends Controller
                         'in',
                         'goods_receipt',
                         $receipt->id,
-                        Auth::id()
+                        Auth::id(),
+                        [
+                            'rack_id' => $item['rack_id'] ?? null,
+                            'batch_number' => $item['batch_number'] ?? null,
+                            'expired_at' => $item['expired_at'] ?? null,
+                            'serial_number' => $item['serial_number'] ?? null,
+                        ]
                     );
                 }
 
@@ -130,6 +145,15 @@ class GoodsReceiptController extends Controller
         ]);
     }
 
+    public function downloadPdf(GoodsReceipt $barang_masuk)
+    {
+        $barang_masuk->load(['items.product', 'purchaseOrder', 'warehouse', 'user', 'supplier']);
+        
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.goods-receipt', ['goodsReceipt' => $barang_masuk]);
+        
+        return $pdf->download("barang-masuk-{$barang_masuk->no_receipt}.pdf");
+    }
+
     public function destroy(GoodsReceipt $barang_masuk)
     {
         try {
@@ -141,7 +165,7 @@ class GoodsReceiptController extends Controller
                 if ($barang_masuk->purchase_order_id) {
                     $po = PurchaseOrder::find($barang_masuk->purchase_order_id);
                     if ($po) {
-                        $po->status = 'approved'; 
+                        $po->status = 'confirmed'; 
                         $po->save();
                     }
                 }

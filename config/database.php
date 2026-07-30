@@ -64,6 +64,20 @@ return [
             ]) : [],
         ],
 
+        'olshop' => [
+            'driver' => 'mysql',
+            'host' => env('OLSHOP_DB_HOST', '127.0.0.1'),
+            'port' => env('OLSHOP_DB_PORT', '3306'),
+            'database' => env('OLSHOP_DB_DATABASE', 'olshop_db'),
+            'username' => env('OLSHOP_DB_USERNAME', 'root'),
+            'password' => env('OLSHOP_DB_PASSWORD', '272800'),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'strict' => true,
+            'engine' => null,
+        ],
+
         'mariadb' => [
             'driver' => 'mariadb',
             'url' => env('DB_URL'),

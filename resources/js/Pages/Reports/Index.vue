@@ -63,20 +63,56 @@ const renderChart = async () => {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            animation: {
+                duration: 2000,
+                easing: 'easeOutQuart',
+            },
+            animations: {
+                y: {
+                    type: 'number',
+                    easing: 'easeOutQuart',
+                    duration: 1000,
+                    from: 1000,
+                    delay: (context) => {
+                        if (context.type !== 'data' || context.active) return 0;
+                        return context.index * 100;
+                    }
+                },
+                opacity: {
+                    from: 0,
+                    to: 1,
+                    duration: 1000,
+                    delay: (context) => {
+                        if (context.type !== 'data' || context.active) return 0;
+                        return context.index * 100;
+                    }
+                }
+            },
             plugins: {
                 legend: { display: false },
                 tooltip: {
+                    backgroundColor: '#1E3A5F',
+                    titleFont: { size: 12, weight: 'bold' },
+                    bodyFont: { size: 12 },
+                    padding: 12,
+                    cornerRadius: 12,
+                    displayColors: false,
                     callbacks: {
                         label: ctx => formatRupiah(ctx.parsed.y)
                     }
                 }
             },
             scales: {
-                x: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#94a3b8' } },
+                x: { 
+                    grid: { display: false }, 
+                    ticks: { font: { size: 10, weight: 'bold' }, color: '#94a3b8' } 
+                },
                 y: {
-                    grid: { color: '#f1f5f9' },
+                    beginAtZero: true,
+                    grid: { color: '#f1f5f9', drawBorder: false },
                     ticks: {
-                        font: { size: 10 }, color: '#94a3b8',
+                        font: { size: 10, weight: 'bold' }, 
+                        color: '#94a3b8',
                         callback: v => formatRupiahShort(v)
                     }
                 }

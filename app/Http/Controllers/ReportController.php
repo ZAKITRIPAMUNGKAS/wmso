@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\ReportExport;
 
 class ReportController extends Controller
 {
@@ -198,7 +200,7 @@ class ReportController extends Controller
 
             $data = $q->select(
                 'goods_receipts.tanggal as tgl', 'goods_receipts.no_receipt as ref',
-                DB::raw('COALESCE(suppliers.nama, "Tanpa Supplier") as pihak'),
+                DB::raw("COALESCE(suppliers.nama, 'Tanpa Supplier') as pihak"),
                 'products.nama as product', 'goods_receipt_items.quantity as qty',
                 'goods_receipt_items.satuan as satuan',
                 DB::raw('products.harga as harga_satuan'),
@@ -223,7 +225,7 @@ class ReportController extends Controller
             $data = $q->select(
                 'delivery_orders.tanggal as tgl', 'delivery_orders.no_sj as ref',
                 'customers.nama as pihak', 'products.nama as product',
-                'delivery_order_items.quantity as qty', DB::raw('"pcs" as satuan'),
+                'delivery_order_items.quantity as qty', DB::raw("'pcs' as satuan"),
                 DB::raw('ROUND(delivery_order_items.subtotal / delivery_order_items.quantity) as harga_satuan'),
                 'delivery_order_items.subtotal as total'
             )->orderBy('tgl')->get();
@@ -242,9 +244,9 @@ class ReportController extends Controller
                 ->join('warehouses', 'product_stocks.warehouse_id', '=', 'warehouses.id')
                 ->where('product_stocks.quantity', '>', 0)
                 ->select(
-                    DB::raw('"' . Carbon::today()->format('Y-m-d') . '" as tgl'),
-                    DB::raw('"STOCK" as ref'), 'warehouses.nama as pihak', 'products.nama as product',
-                    'product_stocks.quantity as qty', DB::raw('"unit" as satuan'),
+                    DB::raw("'" . Carbon::today()->format('Y-m-d') . "' as tgl"),
+                    DB::raw("'STOCK' as ref"), 'warehouses.nama as pihak', 'products.nama as product',
+                    'product_stocks.quantity as qty', DB::raw("'unit' as satuan"),
                     'products.harga as harga_satuan',
                     DB::raw('(product_stocks.quantity * products.harga) as total')
                 )->get();
@@ -291,7 +293,7 @@ class ReportController extends Controller
                 ->select(
                     'goods_receipts.tanggal as Tanggal',
                     'goods_receipts.no_receipt as No_Referensi',
-                    DB::raw('COALESCE(suppliers.nama, "Tanpa Supplier") as Supplier'),
+                    DB::raw("COALESCE(suppliers.nama, 'Tanpa Supplier') as Supplier"),
                     'products.nama as Produk',
                     'goods_receipt_items.quantity as Qty',
                     'goods_receipt_items.satuan as Satuan',
@@ -308,7 +310,7 @@ class ReportController extends Controller
                 ->select(
                     'delivery_orders.tanggal as Tanggal', 'delivery_orders.no_sj as No_Referensi',
                     'customers.nama as Customer', 'products.nama as Produk',
-                    'delivery_order_items.quantity as Qty', DB::raw('"pcs" as Satuan'),
+                    'delivery_order_items.quantity as Qty', DB::raw("'pcs' as Satuan"),
                     DB::raw('ROUND(delivery_order_items.subtotal / delivery_order_items.quantity) as Harga_Satuan'),
                     'delivery_order_items.subtotal as Total'
                 )->orderBy('delivery_orders.tanggal', 'desc')->get();
@@ -319,40 +321,20 @@ class ReportController extends Controller
                 ->join('warehouses', 'product_stocks.warehouse_id', '=', 'warehouses.id')
                 ->where('product_stocks.quantity', '>', 0)
                 ->select(
-                    DB::raw('"' . Carbon::today()->format('Y-m-d') . '" as Tanggal'),
-                    DB::raw('"STOCK" as No_Referensi'), 'warehouses.nama as Gudang',
+                    DB::raw("'" . Carbon::today()->format('Y-m-d') . "' as Tanggal"),
+                    DB::raw("'STOCK' as No_Referensi"), 'warehouses.nama as Gudang',
                     'products.nama as Produk', 'product_stocks.quantity as Qty',
-                    DB::raw('"unit" as Satuan'), 'products.harga as Harga_Satuan',
+                    DB::raw("'unit' as Satuan"), 'products.harga as Harga_Satuan',
                     DB::raw('(product_stocks.quantity * products.harga) as Total')
                 )->get();
         }
 
         $companyName = company('company_name') ?? 'CV. Listrindo Jaya Elektrik';
+        $filename    = "Laporan_{$typeLabel}_{$startDate}_sd_{$endDate}.xlsx";
 
-        return response()->stream(function () use ($data, $typeLabel, $startDate, $endDate, $companyName) {
-            $f = fopen('php://output', 'w');
-            fputs($f, "\xEF\xBB\xBF"); // BOM UTF-8
-
-            // Meta header
-            fputcsv($f, [$companyName], ';');
-            fputcsv($f, ["LAPORAN {$typeLabel}"], ';');
-            fputcsv($f, ["Periode: {$startDate} s/d {$endDate}"], ';');
-            fputcsv($f, ["Dicetak: " . now()->format('d M Y H:i')], ';');
-            fputcsv($f, [], ';'); // blank row
-
-            if ($data->isNotEmpty()) {
-                fputcsv($f, array_keys((array) $data->first()), ';');
-                foreach ($data as $row) {
-                    fputcsv($f, (array) $row, ';');
-                }
-            }
-            fclose($f);
-        }, 200, [
-            'Content-Type'        => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
-            'Pragma'              => 'no-cache',
-            'Cache-Control'       => 'must-revalidate, post-check=0, pre-check=0',
-            'Expires'             => '0',
-        ]);
+        return Excel::download(
+            new ReportExport($data, $typeLabel, $startDate, $endDate, $companyName),
+            $filename
+        );
     }
 }

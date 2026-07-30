@@ -30,7 +30,7 @@ const deleteItem = (id) => {
                     <h2 class="text-xs font-bold text-slate-400 uppercase tracking-[0.2em]">Penerimaan Barang</h2>
                     <p class="text-[11px] text-slate-500 font-bold mt-1 uppercase tracking-tight">Logistik Masuk & Purchase Order</p>
                 </div>
-                <Link :href="route('barang-masuk.create')" class="btn-primary flex items-center justify-center gap-2">
+                <Link v-if="$page.props.auth.user.role !== 'viewer'" :href="route('barang-masuk.create')" class="btn-primary flex items-center justify-center gap-2">
                     <PhPlus weight="bold" /> <span class="tracking-tight uppercase font-black text-[10px]">Penerimaan Baru</span>
                 </Link>
             </div>
@@ -51,7 +51,7 @@ const deleteItem = (id) => {
                             <Link :href="route('barang-masuk.show', item.id)" class="p-2 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition shadow-sm active:scale-95">
                                 <PhEye :size="18" weight="bold" />
                             </Link>
-                            <button @click="deleteItem(item.id)" class="p-2 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-100 transition shadow-sm active:scale-95">
+                            <button v-if="$page.props.auth.user.role !== 'viewer'" @click="deleteItem(item.id)" class="p-2 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-100 transition shadow-sm active:scale-95">
                                 <PhTrash :size="18" weight="bold" />
                             </button>
                         </div>
@@ -73,7 +73,7 @@ const deleteItem = (id) => {
                             <Link :href="route('barang-masuk.show', item.id)" class="p-2 text-indigo-600 bg-indigo-50 rounded-lg">
                                 <PhEye :size="18" weight="bold" />
                             </Link>
-                            <button @click="deleteItem(item.id)" class="p-2 text-rose-600 bg-rose-50 rounded-lg">
+                            <button v-if="$page.props.auth.user.role !== 'viewer'" @click="deleteItem(item.id)" class="p-2 text-rose-600 bg-rose-50 rounded-lg">
                                 <PhTrash :size="18" weight="bold" />
                             </button>
                         </div>
