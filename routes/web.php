@@ -20,6 +20,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\StockTransferController;
 use App\Http\Controllers\StockAdjustmentController;
+use App\Http\Controllers\StockMovementController;
 use App\Http\Controllers\RackController;
 
 

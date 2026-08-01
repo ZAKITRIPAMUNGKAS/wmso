@@ -82,22 +82,48 @@ class SyncStockToOlshop implements ShouldQueue, ShouldBeUnique
         }
 
         // Send POST request with timeout and retries
-        $response = Http::withToken($token)
-            ->timeout(10)
-            ->retry(3, 100)
-            ->post($olshopUrl, [
-                'kode_barang'   => $product->kode_barang,
-                'nama'          => $product->nama,
-                'harga'         => (float) $product->harga,
-                'total_stock'   => (int) $totalStock,
-                'calculated_at' => $this->calculatedAt,
+        try {
+            $response = Http::withToken($token)
+                ->timeout(10)
+                ->retry(2, 100)
+                ->post($olshopUrl, [
+                    'kode_barang'   => $product->kode_barang,
+                    'nama'          => $product->nama,
+                    'harga'         => (float) $product->harga,
+                    'total_stock'   => (int) $totalStock,
+                    'calculated_at' => $this->calculatedAt,
+                ]);
+
+            if ($response->failed()) {
+                Log::channel('api_sync')->warning("SyncStockToOlshop HTTP Warning [Status {$response->status()}]: " . $response->body());
+                FailedSyncLog::create([
+                    'type'          => 'stock_sync',
+                    'payload'       => [
+                        'product_id'    => $this->productId,
+                        'kode_barang'   => $product->kode_barang,
+                        'total_stock'   => $totalStock,
+                        'calculated_at' => $this->calculatedAt,
+                        'status'        => $response->status(),
+                        'error'         => $response->body()
+                    ],
+                    'error_message' => 'Olshop API Status ' . $response->status()
+                ]);
+            } else {
+                Log::channel('api_sync')->info("SyncStockToOlshop Success: Product [{$product->kode_barang}] synced to Olshop. Qty: {$totalStock}");
+            }
+        } catch (Throwable $e) {
+            Log::channel('api_sync')->error("SyncStockToOlshop Exception: " . $e->getMessage());
+            FailedSyncLog::create([
+                'type'          => 'stock_sync',
+                'payload'       => [
+                    'product_id'    => $this->productId,
+                    'kode_barang'   => $product->kode_barang,
+                    'total_stock'   => $totalStock,
+                    'calculated_at' => $this->calculatedAt,
+                ],
+                'error_message' => $e->getMessage()
             ]);
-
-        if ($response->failed()) {
-            throw new \Exception("SyncStockToOlshop HTTP Error [Status {$response->status()}]: " . $response->body());
         }
-
-        Log::channel('api_sync')->info("SyncStockToOlshop Success: Product [{$product->kode_barang}] synced to Olshop. Qty: {$totalStock}");
     }
 
     /**
