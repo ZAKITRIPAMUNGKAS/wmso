@@ -22,12 +22,21 @@ class ProductController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        $lastProduct = Product::where('kode_barang', 'like', 'PRD-%')
-            ->orderByRaw('LENGTH(kode_barang) DESC, kode_barang DESC')
-            ->first();
-        
-        $nextNumber = $lastProduct ? (int) str_replace('PRD-', '', $lastProduct->kode_barang) + 1 : 1;
-        $nextCode = 'PRD-' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+        $isSqlite = \Illuminate\Support\Facades\DB::connection()->getDriverName() === 'sqlite';
+        if ($isSqlite) {
+            $lastProduct = Product::whereRaw("kode_barang GLOB '[0-9]*'")
+                ->selectRaw('CAST(kode_barang AS INTEGER) as num_code')
+                ->orderBy('num_code', 'desc')
+                ->first();
+        } else {
+            $lastProduct = Product::whereRaw("kode_barang REGEXP '^[0-9]+$'")
+                ->selectRaw('CAST(kode_barang AS UNSIGNED) as num_code')
+                ->orderBy('num_code', 'desc')
+                ->first();
+        }
+
+        $nextNumber = $lastProduct ? ((int) $lastProduct->num_code + 1) : 1;
+        $nextCode = sprintf('%06d', $nextNumber);
 
         return Inertia::render('MasterData/Products', [
             'products' => $products,
@@ -39,24 +48,55 @@ class ProductController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'kode_barang' => 'nullable|string|unique:products,kode_barang|max:50',
-            'nama' => 'required',
-            'merk' => 'required',
-            'tipe' => 'required',
-            'satuan' => 'required',
-            'harga' => 'required|numeric',
+            'kode_barang'  => 'nullable|string|unique:products,kode_barang|max:50',
+            'nama'         => 'required',
+            'merk'         => 'required',
+            'tipe'         => 'required',
+            'satuan'       => 'required',
+            'harga'        => 'required|numeric',
             'stok_minimum' => 'required|integer',
+            'deskripsi'    => 'nullable|string',
+            'image'        => 'nullable|image|max:2048',
+            'images'       => 'nullable|array',
+            'images.*'     => 'image|max:2048',
         ]);
 
         if (empty($validated['kode_barang'])) {
-            $lastProduct = Product::where('kode_barang', 'like', 'PRD-%')
-                ->orderByRaw('LENGTH(kode_barang) DESC, kode_barang DESC')
-                ->first();
-            $nextNumber = $lastProduct ? (int) str_replace('PRD-', '', $lastProduct->kode_barang) + 1 : 1;
-            $validated['kode_barang'] = 'PRD-' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+            $isSqlite = \Illuminate\Support\Facades\DB::connection()->getDriverName() === 'sqlite';
+            if ($isSqlite) {
+                $lastProduct = Product::whereRaw("kode_barang GLOB '[0-9]*'")
+                    ->selectRaw('CAST(kode_barang AS INTEGER) as num_code')
+                    ->orderBy('num_code', 'desc')
+                    ->first();
+            } else {
+                $lastProduct = Product::whereRaw("kode_barang REGEXP '^[0-9]+$'")
+                    ->selectRaw('CAST(kode_barang AS UNSIGNED) as num_code')
+                    ->orderBy('num_code', 'desc')
+                    ->first();
+            }
+            $nextNumber = $lastProduct ? ((int) $lastProduct->num_code + 1) : 1;
+            $validated['kode_barang'] = sprintf('%06d', $nextNumber);
         }
 
+        if ($request->hasFile('image')) {
+            $validated['image'] = $request->file('image')->store('products', 'public');
+        }
+
+        $galleryFiles = $request->file('images');
+        unset($validated['images']);
+
         $product = Product::create($validated);
+
+        if ($request->hasFile('images')) {
+            foreach ($galleryFiles as $idx => $img) {
+                $path = $img->store('products', 'public');
+                $product->images()->create([
+                    'image_path' => $path,
+                    'is_primary' => ($idx === 0),
+                    'sort_order' => $idx,
+                ]);
+            }
+        }
 
         // Dispatch stock sync to Olshop
         \App\Jobs\SyncStockToOlshop::dispatch($product->id, now()->format('Y-m-d\TH:i:s\Z'));
@@ -67,20 +107,52 @@ class ProductController extends Controller
     public function update(Request $request, Product $product)
     {
         $validated = $request->validate([
-            'kode_barang' => 'nullable|string|unique:products,kode_barang,' . $product->id . '|max:50',
-            'nama' => 'required',
-            'merk' => 'required',
-            'tipe' => 'required',
-            'satuan' => 'required',
-            'harga' => 'required|numeric',
+            'kode_barang'  => 'nullable|string|unique:products,kode_barang,' . $product->id . '|max:50',
+            'nama'         => 'required',
+            'merk'         => 'required',
+            'tipe'         => 'required',
+            'satuan'       => 'required',
+            'harga'        => 'required|numeric',
             'stok_minimum' => 'required|integer',
+            'deskripsi'    => 'nullable|string',
+            'image'        => 'nullable|image|max:2048',
+            'images'       => 'nullable|array',
+            'images.*'     => 'image|max:2048',
         ]);
 
         if (empty($validated['kode_barang'])) {
             $validated['kode_barang'] = $product->kode_barang;
         }
 
+        if ($request->hasFile('image')) {
+            if ($product->image && \Illuminate\Support\Facades\Storage::disk('public')->exists($product->image)) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($product->image);
+            }
+            $validated['image'] = $request->file('image')->store('products', 'public');
+        }
+
+        $galleryFiles = $request->file('images');
+        unset($validated['images']);
+
         $product->update($validated);
+
+        if ($request->hasFile('images')) {
+            foreach ($product->images as $oldImg) {
+                if (\Illuminate\Support\Facades\Storage::disk('public')->exists($oldImg->image_path)) {
+                    \Illuminate\Support\Facades\Storage::disk('public')->delete($oldImg->image_path);
+                }
+            }
+            $product->images()->delete();
+
+            foreach ($galleryFiles as $idx => $img) {
+                $path = $img->store('products', 'public');
+                $product->images()->create([
+                    'image_path' => $path,
+                    'is_primary' => ($idx === 0),
+                    'sort_order' => $idx,
+                ]);
+            }
+        }
 
         // Dispatch stock sync to Olshop
         \App\Jobs\SyncStockToOlshop::dispatch($product->id, now()->format('Y-m-d\TH:i:s\Z'));

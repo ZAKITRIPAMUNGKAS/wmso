@@ -12,6 +12,55 @@ class Product extends Model
 
     protected $guarded = [];
 
+    protected $appends = ['image_url', 'gallery_image_urls'];
+
+    public function images(): HasMany
+    {
+        return $this->hasMany(ProductImage::class)->orderBy('sort_order');
+    }
+
+    public function getImageUrlAttribute(): ?string
+    {
+        // Bug fix: use $this->images (eager-loaded collection) instead of $this->images()
+        // to avoid N+1 queries and infinite recursion when image_url is in $appends
+        $images = $this->relationLoaded('images')
+            ? $this->getRelation('images')
+            : $this->images()->get();
+
+        $primary = $images->firstWhere('is_primary', true) ?? $images->first();
+        if ($primary) {
+            return $primary->image_url;
+        }
+
+        if ($this->image) {
+            if (filter_var($this->image, FILTER_VALIDATE_URL)) {
+                return $this->image;
+            }
+            return asset('storage/' . $this->image);
+        }
+        return null;
+    }
+
+    public function getGalleryImageUrlsAttribute(): array
+    {
+        // Use already-loaded relation to prevent N+1 queries
+        $images = $this->relationLoaded('images')
+            ? $this->getRelation('images')
+            : $this->images()->get();
+
+        $urls = $images->map(fn($img) => $img->image_url)->filter()->values()->toArray();
+
+        if (empty($urls) && $this->image) {
+            // Fallback: use the single image column
+            $url = filter_var($this->image, FILTER_VALIDATE_URL)
+                ? $this->image
+                : asset('storage/' . $this->image);
+            $urls[] = $url;
+        }
+
+        return array_values(array_unique($urls));
+    }
+
     public function stocks(): HasMany
     {
         return $this->hasMany(ProductStock::class);

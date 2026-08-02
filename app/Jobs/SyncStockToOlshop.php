@@ -87,11 +87,14 @@ class SyncStockToOlshop implements ShouldQueue, ShouldBeUnique
                 ->timeout(10)
                 ->retry(2, 100)
                 ->post($olshopUrl, [
-                    'kode_barang'   => $product->kode_barang,
-                    'nama'          => $product->nama,
-                    'harga'         => (float) $product->harga,
-                    'total_stock'   => (int) $totalStock,
-                    'calculated_at' => $this->calculatedAt,
+                    'kode_barang'        => $product->kode_barang,
+                    'nama'               => $product->nama,
+                    'harga'              => (float) $product->harga,
+                    'total_stock'        => (int) $totalStock,
+                    'image_url'          => $product->image_url,
+                    'gallery_image_urls' => $product->gallery_image_urls,
+                    'deskripsi'          => $product->deskripsi,
+                    'calculated_at'      => $this->calculatedAt,
                 ]);
 
             if ($response->failed()) {
