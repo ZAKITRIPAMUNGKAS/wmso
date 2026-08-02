@@ -53,12 +53,8 @@ defineEmits(['search', 'add']);
             </div>
         </div>
 
-        <div class="w-full grid grid-cols-1">
-            <Transition name="page" appear>
-                <div :key="$page.url" class="w-full col-start-1 row-start-1">
-                    <slot />
-                </div>
-            </Transition>
+        <div class="w-full">
+            <slot />
         </div>
     </AuthenticatedLayout>
 </template>

@@ -26,10 +26,10 @@ onMounted(() => {
             <Topbar :title="title" :is-ready="isReady" />
 
             <main class="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 lg:p-8 pb-24 scrollbar-hide">
-                <div class="max-w-7xl mx-auto w-full grid grid-cols-1">
-                    <Transition name="page" appear>
+                <div class="max-w-7xl mx-auto w-full">
+                    <Transition name="page" mode="out-in" appear>
                         <div :key="$page.url" 
-                             class="w-full col-start-1 row-start-1"
+                             class="w-full"
                              :class="isReady ? 'animate-fade-up stagger-6' : 'opacity-0'">
                             <!-- Toast Notification -->
                              <div v-if="$page.props.flash.success || $page.props.flash.error" 
