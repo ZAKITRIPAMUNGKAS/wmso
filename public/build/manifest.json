@@ -113,7 +113,7 @@
     "name": "vendor"
   },
   "resources/css/app.css": {
-    "file": "assets/app-Clo6XkR2.css",
+    "file": "assets/app-BYHNlhmh.css",
     "src": "resources/css/app.css",
     "isEntry": true
   },
@@ -348,7 +348,7 @@
     ]
   },
   "resources/js/Pages/MasterData/Products.vue": {
-    "file": "assets/Products-CJq0Yj_7.js",
+    "file": "assets/Products-DHYyc9Yz.js",
     "name": "Products",
     "src": "resources/js/Pages/MasterData/Products.vue",
     "isDynamicEntry": true,
@@ -721,7 +721,7 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-CaCgk4kw.js",
+    "file": "assets/app-Cnf--uxi.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
@@ -776,7 +776,7 @@
       "resources/js/Pages/Welcome.vue"
     ],
     "css": [
-      "assets/app-Clo6XkR2.css"
+      "assets/app-BYHNlhmh.css"
     ]
   }
 }

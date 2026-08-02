@@ -160,39 +160,37 @@ watch(search, (newVal) => {
             @add="openModal()"
             @search="handleSearch"
         >
-            <ResponsiveTable :headers="['Kode', 'Nama & Tipe', 'Satuan', 'Stok', 'Harga']" :items="products?.data || []">
+            <ResponsiveTable :headers="['Foto', 'Kode', 'Nama & Tipe', 'Satuan', 'Stok', 'Harga']" :items="products?.data || []">
                 <template #row="{ item }">
-                    <td class="px-8 py-5">
+                    <td class="px-6 py-4">
+                        <div class="w-12 h-12 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0 flex items-center justify-center shadow-sm">
+                            <img v-if="item.image_url" :src="item.image_url" :alt="item.nama" class="w-full h-full object-cover">
+                            <PhCube v-else :size="24" weight="bold" class="text-slate-400" />
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
                         <span class="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100 uppercase tracking-wider">
                             {{ item.kode_barang }}
                         </span>
                     </td>
-                    <td class="px-8 py-5">
-                        <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0 flex items-center justify-center shadow-sm">
-                                <img v-if="item.image_url" :src="item.image_url" :alt="item.nama" class="w-full h-full object-cover">
-                                <PhCube v-else :size="22" weight="bold" class="text-slate-400" />
-                            </div>
-                            <div>
-                                <div class="font-black text-slate-800 tracking-tight uppercase">{{ item.nama }}</div>
-                                <div class="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{{ item.merk }} / {{ item.tipe }}</div>
-                            </div>
-                        </div>
+                    <td class="px-6 py-4">
+                        <div class="font-black text-slate-800 tracking-tight uppercase">{{ item.nama }}</div>
+                        <div class="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{{ item.merk }} / {{ item.tipe }}</div>
                     </td>
-                    <td class="px-8 py-5 text-sm font-bold text-slate-600 tracking-tight uppercase">{{ item.satuan }}</td>
-                    <td class="px-8 py-5">
+                    <td class="px-6 py-4 text-sm font-bold text-slate-600 tracking-tight uppercase">{{ item.satuan }}</td>
+                    <td class="px-6 py-4">
                         <div class="flex items-center gap-2">
                             <span class="text-sm font-black text-slate-800 tracking-tight">{{ item.total_stock || 0 }}</span>
                             <span v-if="(item.total_stock || 0) < item.stok_minimum" class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
                         </div>
                     </td>
-                    <td class="px-8 py-5">
+                    <td class="px-6 py-4">
                         <div class="flex items-center gap-2">
                             <span class="text-sm font-black text-slate-800 tracking-tight uppercase">Rp {{ Number(item.harga).toLocaleString('id-ID') }}</span>
                             <span class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">/ {{ item.satuan }}</span>
                         </div>
                     </td>
-                    <td class="px-8 py-5 text-right">
+                    <td class="px-6 py-4 text-right">
                         <div class="flex items-center justify-end gap-2">
                             <Link :href="route('products.show', item.id)" class="p-2.5 text-slate-500 hover:bg-slate-50 hover:text-indigo-600 rounded-xl transition-all active:scale-90 uppercase">
                                 <PhEye :size="20" weight="bold" />
