@@ -13,6 +13,7 @@ class ProductController extends Controller
         $search = request('search');
         
         $products = Product::query()
+            ->with('images')
             ->withSum('stocks as total_stock', 'quantity')
             ->when($search, function ($query, $search) {
                 $query->where('nama', 'like', "%{$search}%")

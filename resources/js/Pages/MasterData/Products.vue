@@ -5,7 +5,7 @@ import Modal from '@/Components/Modal.vue';
 import InputError from '@/Components/InputError.vue';
 import { useForm, router, Head, Link } from '@inertiajs/vue3';
 import { ref, watch, computed } from 'vue';
-import { PhNotePencil, PhTrash, PhTag, PhCube, PhEye } from "@phosphor-icons/vue";
+import { PhNotePencil, PhTrash, PhTag, PhCube, PhEye, PhImage } from "@phosphor-icons/vue";
 
 const props = defineProps({
     products: {
@@ -23,6 +23,7 @@ const props = defineProps({
 const showModal = ref(false);
 const editingProduct = ref(null);
 const search = ref(props.filters?.search || '');
+const imagePreview = ref(null);
 
 const form = useForm({
     kode_barang: '',
@@ -31,7 +32,8 @@ const form = useForm({
     tipe: '',
     satuan: 'Roll',
     harga: '',
-    stok_minimum: 10
+    stok_minimum: 10,
+    image: null
 });
 
 const openModal = (product = null) => {
@@ -44,21 +46,38 @@ const openModal = (product = null) => {
         form.satuan = product.satuan;
         form.harga = product.harga;
         form.stok_minimum = product.stok_minimum;
+        form.image = null;
+        imagePreview.value = product.image_url || null;
     } else {
         form.reset();
         form.kode_barang = '';
+        form.image = null;
+        imagePreview.value = null;
     }
     showModal.value = true;
 };
 
+const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        form.image = file;
+        imagePreview.value = URL.createObjectURL(file);
+    }
+};
+
 const submit = () => {
     if (editingProduct.value) {
-        form.put(route('products.update', editingProduct.value.id), {
+        form.transform((data) => ({
+            ...data,
+            _method: 'PUT'
+        })).post(route('products.update', editingProduct.value.id), {
             onSuccess: () => closeModal(),
+            preserveScroll: true
         });
     } else {
         form.post(route('products.store'), {
             onSuccess: () => closeModal(),
+            preserveScroll: true
         });
     }
 };
@@ -75,6 +94,7 @@ const closeModal = () => {
     showModal.value = false;
     form.reset();
     editingProduct.value = null;
+    imagePreview.value = null;
 };
 
 const formatNumber = (num) => {
@@ -148,8 +168,16 @@ watch(search, (newVal) => {
                         </span>
                     </td>
                     <td class="px-8 py-5">
-                        <div class="font-black text-slate-800 tracking-tight uppercase">{{ item.nama }}</div>
-                        <div class="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{{ item.merk }} / {{ item.tipe }}</div>
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0 flex items-center justify-center shadow-sm">
+                                <img v-if="item.image_url" :src="item.image_url" :alt="item.nama" class="w-full h-full object-cover">
+                                <PhCube v-else :size="22" weight="bold" class="text-slate-400" />
+                            </div>
+                            <div>
+                                <div class="font-black text-slate-800 tracking-tight uppercase">{{ item.nama }}</div>
+                                <div class="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{{ item.merk }} / {{ item.tipe }}</div>
+                            </div>
+                        </div>
                     </td>
                     <td class="px-8 py-5 text-sm font-bold text-slate-600 tracking-tight uppercase">{{ item.satuan }}</td>
                     <td class="px-8 py-5">
@@ -182,12 +210,13 @@ watch(search, (newVal) => {
                 <template #mobile-card="{ item }">
                     <div class="flex justify-between items-start mb-4 uppercase">
                         <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 uppercase">
-                                <PhCube :size="20" weight="fill" />
+                            <div class="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
+                                <img v-if="item.image_url" :src="item.image_url" :alt="item.nama" class="w-full h-full object-cover">
+                                <PhCube v-else :size="22" weight="fill" class="text-slate-400" />
                             </div>
                             <div>
                                 <div class="font-black text-slate-800 tracking-tight uppercase">{{ item.nama }}</div>
-                                <div class="text-[10px] font-bold text-indigo-600 uppercase tracking-widest uppercase">{{ item.kode_barang }}</div>
+                                <div class="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">{{ item.kode_barang }}</div>
                             </div>
                         </div>
                         <div class="flex gap-1 uppercase">
@@ -202,28 +231,28 @@ watch(search, (newVal) => {
                             </button>
                         </div>
                     </div>
-                    <div class="grid grid-cols-3 gap-4 pt-4 border-t border-slate-50 uppercase uppercase">
+                    <div class="grid grid-cols-3 gap-4 pt-4 border-t border-slate-50 uppercase">
                         <div>
                             <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Merk/Tipe</p>
                             <p class="text-sm font-bold text-slate-700 tracking-tight line-clamp-1 uppercase">{{ item.merk }} / {{ item.tipe }}</p>
                         </div>
                         <div>
-                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest uppercase">Stok</p>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Stok</p>
                             <div class="flex items-center gap-2 uppercase">
                                 <p class="text-sm font-black text-slate-900 tracking-tight uppercase">{{ item.total_stock || 0 }}</p>
                                 <span v-if="(item.total_stock || 0) < item.stok_minimum" class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
                             </div>
                         </div>
                         <div class="text-right">
-                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest uppercase">Harga</p>
-                            <p class="text-sm font-black text-slate-900 tracking-tight uppercase uppercase">Rp {{ Number(item.harga).toLocaleString('id-ID') }}</p>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Harga</p>
+                            <p class="text-sm font-black text-slate-900 tracking-tight uppercase">Rp {{ Number(item.harga).toLocaleString('id-ID') }}</p>
                         </div>
                     </div>
                 </template>
 
                 <template #pagination>
                     <div class="flex flex-col sm:flex-row justify-between items-center gap-4 w-full uppercase">
-                        <p class="text-xs text-slate-400 font-bold uppercase tracking-widest uppercase">Showing {{ products?.from || 0 }}-{{ products?.to || 0 }} of {{ products?.total || 0 }}</p>
+                        <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">Showing {{ products?.from || 0 }}-{{ products?.to || 0 }} of {{ products?.total || 0 }}</p>
                         <div class="flex gap-1 overflow-x-auto pb-2 sm:pb-0 scrollbar-hide uppercase">
                             <template v-for="(link, k) in products?.links || []" :key="k">
                                 <Link v-if="link.url" 
@@ -243,27 +272,43 @@ watch(search, (newVal) => {
             <Modal :show="showModal" :title="editingProduct ? 'Edit Produk' : 'Tambah Produk Baru'" @close="closeModal">
                 <form @submit.prevent="submit" class="flex flex-col h-full md:h-auto uppercase">
                     <div class="p-6 md:p-8 space-y-6">
+                        <!-- Foto Upload Section -->
+                        <div class="col-span-1 md:col-span-2">
+                            <label class="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-widest ml-1">Foto Produk</label>
+                            <div class="flex items-center gap-4 p-4 bg-slate-50/60 border border-slate-200/80 rounded-2xl">
+                                <div class="w-16 h-16 rounded-2xl bg-white border border-slate-200 shrink-0 flex items-center justify-center overflow-hidden relative shadow-sm">
+                                    <img v-if="imagePreview" :src="imagePreview" class="w-full h-full object-cover">
+                                    <PhCube v-else :size="28" weight="bold" class="text-slate-300" />
+                                </div>
+                                <div class="flex-1">
+                                    <input type="file" @change="handleFileChange" accept="image/*" class="block w-full text-xs text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 transition-all cursor-pointer">
+                                    <p class="text-[11px] text-slate-400 font-bold uppercase tracking-wider mt-1.5">Format: JPG, PNG, WEBP (Maksimal 2MB)</p>
+                                </div>
+                            </div>
+                            <InputError :message="form.errors.image" />
+                        </div>
+
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
                             <div class="col-span-1">
-                                <label class="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-widest ml-1 uppercase">Kode</label>
+                                <label class="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-widest ml-1">Kode</label>
                                 <input type="text" v-model="form.kode_barang" class="input-base font-bold text-indigo-600 uppercase" :placeholder="editingProduct ? 'Kode barang...' : props.next_code + ' (Otomatis)'">
                                 <InputError :message="form.errors.kode_barang" />
                             </div>
                             <div class="col-span-1">
-                                <label class="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-widest ml-1 uppercase">Nama Produk</label>
+                                <label class="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-widest ml-1">Nama Produk</label>
                                 <input type="text" v-model="form.nama" required class="input-base font-bold uppercase" placeholder="Nama barang...">
                                 <InputError :message="form.errors.nama" />
                             </div>
                             <div class="col-span-1">
-                                <label class="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-widest ml-1 uppercase">Merk</label>
+                                <label class="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-widest ml-1">Merk</label>
                                 <input type="text" v-model="form.merk" class="input-base font-bold uppercase" placeholder="Merk barang...">
                             </div>
                             <div class="col-span-1">
-                                <label class="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-widest ml-1 uppercase">Varian/Tipe</label>
+                                <label class="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-widest ml-1">Varian/Tipe</label>
                                 <input type="text" v-model="form.tipe" class="input-base font-bold uppercase" placeholder="Tipe/Varian...">
                             </div>
                             <div class="col-span-1">
-                                <label class="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-widest ml-1 uppercase">Satuan</label>
+                                <label class="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-widest ml-1">Satuan</label>
                                 <select v-model="form.satuan" class="input-base font-bold appearance-none uppercase">
                                     <option>Roll</option>
                                     <option>Pcs</option>
@@ -271,7 +316,7 @@ watch(search, (newVal) => {
                                 </select>
                             </div>
                             <div class="col-span-1">
-                                <label class="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-widest ml-1 uppercase">Harga</label>
+                                <label class="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-widest ml-1">Harga</label>
                                 <div class="relative">
                                     <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">Rp</span>
                                     <input type="text" v-model="formattedHarga" placeholder="0" class="input-base !pl-10 font-black uppercase">
@@ -279,7 +324,7 @@ watch(search, (newVal) => {
                                 <InputError :message="form.errors.harga" />
                             </div>
                             <div class="col-span-1">
-                                <label class="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-widest ml-1 uppercase">Stok Minimum</label>
+                                <label class="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-widest ml-1">Stok Minimum</label>
                                 <input type="text" v-model="formattedStokMin" placeholder="0" class="input-base font-black uppercase">
                                 <InputError :message="form.errors.stok_minimum" />
                             </div>
