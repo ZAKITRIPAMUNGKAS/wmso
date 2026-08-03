@@ -11,9 +11,9 @@
         <title inertia>{{ config('app.name', 'Laravel') }} — {{ config('company.short_name') }}</title>
 
         <!-- Favicon (Official Listrindo Logo) -->
-        <link rel="icon" type="image/jpeg" href="/favicon.jpg">
-        <link rel="apple-touch-icon" href="/favicon.jpg">
-        <link rel="manifest" href="/site.webmanifest">
+        <link rel="icon" type="image/jpeg" href="/favicon.jpg?v=2">
+        <link rel="shortcut icon" href="/favicon.ico?v=2">
+        <link rel="apple-touch-icon" href="/favicon.jpg?v=2">
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.googleapis.com">
