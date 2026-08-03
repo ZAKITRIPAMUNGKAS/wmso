@@ -39,9 +39,9 @@ class CompanySettingsSeeder extends Seeder
              'group' => 'contact', 'label' => 'Telepon Utama',       'type' => 'text'],
             ['key' => 'phone_secondary',    'value' => '0856-7224-975',                 
              'group' => 'contact', 'label' => 'Telepon Kedua',       'type' => 'text'],
-            ['key' => 'email',              'value' => '',                              
+            ['key' => 'email',              'value' => 'info@listrindojayaelektrik.com',                              
              'group' => 'contact', 'label' => 'Email',               'type' => 'email'],
-            ['key' => 'website',            'value' => '',                              
+            ['key' => 'website',            'value' => 'https://listrindojayaelektrik.com',                              
              'group' => 'contact', 'label' => 'Website',             'type' => 'url'],
         ];
 
