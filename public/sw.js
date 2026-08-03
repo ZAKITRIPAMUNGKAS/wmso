@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wms-listrindo-v1';
+const CACHE_NAME = 'wms-listrindo-v2';
 const OFFLINE_URL = '/offline';
 
 const urlsToCache = [
