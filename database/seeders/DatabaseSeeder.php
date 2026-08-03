@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\Supplier;
 use App\Models\Customer;
 use App\Models\Warehouse;
+use App\Models\ProductStock;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -14,9 +15,6 @@ class DatabaseSeeder extends Seeder
 {
     use WithoutModelEvents;
 
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
         // Create Roles if Spatie is used
@@ -59,68 +57,6 @@ class DatabaseSeeder extends Seeder
         );
         if (method_exists($viewer, 'assignRole')) $viewer->assignRole('viewer');
 
-        Product::firstOrCreate(
-            ['kode_barang' => 'BRG-001'],
-            [
-                'nama' => 'Kabel UTP Cat 6',
-                'merk' => 'Belden',
-                'tipe' => 'Indoor',
-                'satuan' => 'Roll',
-                'harga' => 1200000,
-                'stok_minimum' => 5,
-            ]
-        );
-
-        $items = [
-            ['SKU-9CPHNFID', 'Mesin Bor Listrik Bosch GSB 550 Pro', 'Bosch', 'GSB 550', 500000],
-            ['SKU-HL1WOEPZ', 'Gerinda Tangan Makita GA4030', 'Makita', 'GA4030', 600000],
-            ['SKU-AAE2DZIH', 'Set Kunci Pas Tekiro 8-24mm', 'Tekiro', '8-24mm', 250000],
-            ['SKU-VHURNAT3', 'Tang Kombinasi Krisbow 7 Inch', 'Krisbow', '7 Inch', 80000],
-            ['SKU-L8Q3IZXQ', 'Multimeter Digital Sanwa CD800a', 'Sanwa', 'CD800a', 450000],
-            ['SKU-AUEP5FFO', 'Meteran Laser Bosch GLM 40', 'Bosch', 'GLM 40', 800000],
-            ['SKU-SLDENRLA', 'Kabel Eterna NYM 2x1.5mm 50m', 'Eterna', 'NYM', 350000],
-            ['SKU-GYGUHSLZ', 'Stop Kontak Broco 4 Lubang + Kabel', 'Broco', '4 Lubang', 90000],
-            ['SKU-6AXKM6TW', 'Lampu LED Philips MyCare 12W', 'Philips', 'LED', 50000],
-            ['SKU-SHKHAYQA', 'Lampu Sorot LED Hanochs 50W', 'Hanochs', 'Sorot', 150000],
-            ['SKU-R5UCSBQY', 'Kompresor Angin Lakoni Imola 75', 'Lakoni', 'Imola 75', 1200000],
-            ['SKU-LUIY3SJS', 'Mesin Las Inverter Rhino MMA-120', 'Rhino', 'MMA-120', 850000],
-            ['SKU-VNV5LIY3', 'Smart Switch Wifi Tuya 1 Channel', 'Tuya', 'Smart Switch', 100000],
-            ['SKU-YD4SQUN1', 'Lampu LED Philips Essential 18W Putih', 'Philips', 'Essential', 65000],
-            ['SKU-RHAOTUPD', 'Kabel Eterna NYA 1x1.5mm 100 Meter', 'Eterna', 'NYA', 250000],
-            ['SKU-NVQBFM2M', 'Tang Potong Tekiro 6 Inch', 'Tekiro', '6 Inch', 65000],
-            ['SKU-J0KHEGDC', 'MCB Schneider Electric Domae 1 Phase 16A', 'Schneider', 'MCB', 80000],
-            ['SKU-FRZ001SG', 'Nugget Ayam So Good 500g',                 'So Good',   'Frozen', 32000],
-            ['SKU-FRZ002FS', 'Sosis Sapi Fiesta 360g',                   'Fiesta',    'Frozen', 28500],
-            ['SKU-FRZ003CD', 'Fillet Ikan Dori Cedea 500g',              'Cedea',     'Frozen', 45000],
-            ['SKU-FRZ004CH', 'Dimsum Siomay Udang Champ 300g',           'Champ',     'Frozen', 38000],
-            ['SKU-FRZ005BF', 'Beef Burger Patty Belfoods 400g',          'Belfoods',  'Frozen', 55000],
-        ];
-
-        $stockData = [
-            'SKU-9CPHNFID' => 50,
-            'SKU-HL1WOEPZ' => 40,
-            'SKU-AAE2DZIH' => 60,
-            'SKU-VHURNAT3' => 80,
-            'SKU-L8Q3IZXQ' => 35,
-            'SKU-AUEP5FFO' => 25,
-            'SKU-SLDENRLA' => 45,
-            'SKU-GYGUHSLZ' => 90,
-            'SKU-6AXKM6TW' => 100,
-            'SKU-SHKHAYQA' => 15,
-            'SKU-R5UCSBQY' => 10,
-            'SKU-LUIY3SJS' => 8,
-            'SKU-VNV5LIY3' => 30,
-            'SKU-YD4SQUN1' => 75,
-            'SKU-RHAOTUPD' => 50,
-            'SKU-NVQBFM2M' => 40,
-            'SKU-J0KHEGDC' => 120,
-            'SKU-FRZ001SG' => 200,
-            'SKU-FRZ002FS' => 150,
-            'SKU-FRZ003CD' => 100,
-            'SKU-FRZ004CH' => 120,
-            'SKU-FRZ005BF' => 80,
-        ];
-
         $warehouse = Warehouse::firstOrCreate(
             ['kode_gudang' => 'GDG-01'],
             [
@@ -129,30 +65,54 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
+        $items = [
+            ['000001', 'SPEDA LISTRIK', 'JOYCO', '1', 'Pcs', 10000000, 10, 'https://images.unsplash.com/photo-1571068316344-75bc76f77890?w=600&auto=format&fit=crop'],
+            ['000002', 'KABEL UTP CAT 6', 'BELDEN', 'INDOOR', 'Roll', 1200000, 15, 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop'],
+            ['000003', 'MESIN BOR LISTRIK BOSCH GSB 550 PRO', 'BOSCH', 'GSB 550', 'Pcs', 500000, 50, 'https://images.unsplash.com/photo-1504148455328-c376907d081c?w=600&auto=format&fit=crop'],
+            ['000004', 'GERINDA TANGAN MAKITA GA4030', 'MAKITA', 'GA4030', 'Pcs', 600000, 40, 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=600&auto=format&fit=crop'],
+            ['000005', 'SET KUNCI PAS TEKIRO 8-24MM', 'TEKIRO', '8-24MM', 'Pcs', 250000, 60, 'https://images.unsplash.com/photo-1586864387967-d02ef85d93e8?w=600&auto=format&fit=crop'],
+            ['000006', 'TANG KOMBINASI KRISBOW 7 INCH', 'KRISBOW', '7 INCH', 'Pcs', 80000, 80, 'https://images.unsplash.com/photo-1586864387789-628af9feed72?w=600&auto=format&fit=crop'],
+            ['000007', 'MULTIMETER DIGITAL SANWA CD800A', 'SANWA', 'CD800A', 'Pcs', 450000, 35, 'https://images.unsplash.com/photo-1581092335397-9583fe92d232?w=600&auto=format&fit=crop'],
+            ['000008', 'METERAN LASER BOSCH GLM 40', 'BOSCH', 'GLM 40', 'Pcs', 800000, 25, 'https://images.unsplash.com/photo-1581092580497-e0d23cbdf1dc?w=600&auto=format&fit=crop'],
+            ['000009', 'KABEL ETERNA NYM 2X1.5MM 50M', 'ETERNA', 'NYM', 'Roll', 350000, 45, 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop'],
+            ['000010', 'STOP KONTAK BROCO 4 LUBANG + KABEL', 'BROCO', '4 LUBANG', 'Pcs', 90000, 90, 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=600&auto=format&fit=crop'],
+            ['000011', 'LAMPU LED PHILIPS MYCARE 12W', 'PHILIPS', 'LED', 'Pcs', 50000, 100, 'https://images.unsplash.com/photo-1550985616-10810253b84d?w=600&auto=format&fit=crop'],
+            ['000012', 'LAMPU SOROT LED HANOCHS 50W', 'HANOCHS', 'SOROT', 'Pcs', 150000, 20, 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?w=600&auto=format&fit=crop'],
+            ['000013', 'KOMPRESOR ANGIN LAKONI IMOLA 75', 'LAKONI', 'IMOLA 75', 'Pcs', 1200000, 10, 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=600&auto=format&fit=crop'],
+            ['000014', 'MESIN LAS INVERTER RHINO MMA-120', 'RHINO', 'MMA-120', 'Pcs', 850000, 15, 'https://images.unsplash.com/photo-1504148455328-c376907d081c?w=600&auto=format&fit=crop'],
+            ['000015', 'MCB SCHNEIDER ELECTRIC DOMAE 16A', 'SCHNEIDER', 'MCB', 'Pcs', 80000, 120, 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=600&auto=format&fit=crop'],
+        ];
+
         foreach ($items as $item) {
-            $product = Product::firstOrCreate(
+            $product = Product::updateOrCreate(
                 ['kode_barang' => $item[0]],
                 [
                     'nama' => $item[1],
                     'merk' => $item[2],
                     'tipe' => $item[3],
-                    'harga' => $item[4],
-                    'satuan' => 'Pcs',
-                    'stok_minimum' => 5
+                    'satuan' => $item[4],
+                    'harga' => $item[5],
+                    'stok_minimum' => 5,
+                    'image' => $item[7],
                 ]
             );
 
-            // Seed stock
-            $qty = $stockData[$item[0]] ?? 0;
-            \App\Models\ProductStock::firstOrCreate(
+            ProductStock::updateOrCreate(
                 [
                     'product_id' => $product->id,
                     'warehouse_id' => $warehouse->id,
                 ],
                 [
-                    'quantity' => $qty,
+                    'quantity' => $item[6],
                 ]
             );
+
+            // Sync stock to Olshop
+            try {
+                \App\Jobs\SyncStockToOlshop::dispatch($product->id, now()->format('Y-m-d\TH:i:s\Z'));
+            } catch (\Throwable $e) {
+                // Ignore sync errors during seeding if Olshop is offline
+            }
         }
 
         Supplier::firstOrCreate(
