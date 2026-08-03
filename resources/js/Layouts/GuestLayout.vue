@@ -86,10 +86,9 @@ onMounted(() => {
                         <h3 class="text-2xl font-black tracking-tight mt-1 text-white leading-tight">WMS Gateway</h3>
                     </div>
 
-                    <!-- Logo Badge Top Right (Exact match with reference N logo badge) -->
-                    <div class="w-14 h-14 bg-black/20 backdrop-blur-md rounded-2xl border-2 border-white/30 flex items-center justify-center p-3 shadow-xl">
-                        <img v-if="$page.props.company?.logo" :src="'/storage/' + $page.props.company.logo" alt="Logo" class="w-full h-full object-contain filter brightness-0 invert">
-                        <PhPackage v-else :size="28" weight="bold" class="text-white" />
+                    <!-- Logo Badge Top Right (Official Listrindo Logo) -->
+                    <div class="w-14 h-14 bg-white/10 backdrop-blur-md rounded-2xl border-2 border-white/30 flex items-center justify-center p-2 shadow-xl">
+                        <img :src="$page.props.company?.logo ? '/storage/' + $page.props.company.logo : '/favicon.jpg'" alt="Logo Listrindo" class="w-full h-full object-contain rounded-lg">
                     </div>
                 </div>
 
